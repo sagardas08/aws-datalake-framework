@@ -1,5 +1,7 @@
-import json, ast, decimal
+import json, ast, decimal, sys, logging
+
 from utils.comUtils import *
+from utils.dqUtils import *
 from io import StringIO
 
 import boto3
@@ -56,11 +58,6 @@ def main():
   asset_file_type = items['file_type']
   asset_file_delim = items['file_delim']
   asset_file_header = items['file_header']
-  
-  #asset_file_type = json.loads(items)['file_type']
-  #asset_file_delim = json.loads(items)['file_delim']
-  #asset_file_header = json.loads(items)['file_header']
-  print(asset_file_type, "|", asset_file_delim, "|", asset_file_header)
 
   '''
   Create dataframe using the source data asset
@@ -73,8 +70,11 @@ def main():
     asset_file_delim,
     asset_file_header
   )
+
+  check_df = run_constraint_checks(spark, source_df)
   source_df.printSchema()
-  #col_metadata_tbl = "dl_fmwrk.data_asset." + asset_id
+  spark.sparkContext._gateway.close()
+  spark.stop()
 
 if __name__ == '__main__':
     main()
