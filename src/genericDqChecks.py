@@ -48,7 +48,7 @@ def main():
   Pulling the data asset information from dynamoDB table dl_fmwrk.data_asset 
   based on the Asset ID
   '''
-  dynamodb = boto3.resource('dynamodb')
+  dynamodb = boto3.resource('dynamodb', region_name = "us-east-2")
   asset_info = dynamodb.Table('dl_fmwrk.data_asset')
   asset_info_items = asset_info.query(
     KeyConditionExpression=Key('asset_id').eq(int(asset_id))

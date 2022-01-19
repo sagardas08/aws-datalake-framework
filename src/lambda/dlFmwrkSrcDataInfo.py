@@ -11,7 +11,7 @@ def lambda_handler(event, context):
 
   key_path = key[:key.rfind('/')] + "/"
   source_path = "s3://" + bucket + "/" + key_path
-  source_id = bucket.split('-')[-1]
+  source_id = bucket.split('-')[2]
   asset_id = key.split('/')[0]
 
   print ("Source Path: {}, Source ID: {}, Asset ID: {}".format(source_path, source_id, asset_id))
