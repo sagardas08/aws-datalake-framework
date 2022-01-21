@@ -1,0 +1,7 @@
+{
+"min":".hasMin",
+"null":".isComplete",
+"pk":".isUnique",
+"data_type":".hasDataType",
+"max_length":".hasMaxLength"
+}
