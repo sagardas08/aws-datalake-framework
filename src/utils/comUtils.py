@@ -12,12 +12,11 @@ def get_spark():
     Utility method to return a spark Session object initialized with Pydeequ jars
     :return: Spark Session Object
     """
-    spark = (SparkSession
-         .builder
-         .config("spark.jars.packages", pydeequ.deequ_maven_coord)
-         .config("spark.jars.excludes", pydeequ.f2j_maven_coord)
-         .getOrCreate()
-             )
+    spark = (
+        SparkSession.builder.config("spark.jars.packages", pydeequ.deequ_maven_coord)
+        .config("spark.jars.excludes", pydeequ.f2j_maven_coord)
+        .getOrCreate()
+    )
     return spark
 
 
@@ -32,8 +31,9 @@ def stop_spark(spark):
     print("Stopping Spark Session")
 
 
-def create_spark_df(spark, source_file_path, asset_file_type,
-                    asset_file_delim, asset_file_header):
+def create_spark_df(
+    spark, source_file_path, asset_file_type, asset_file_delim, asset_file_header
+):
     """
 
     :param spark:
@@ -43,16 +43,12 @@ def create_spark_df(spark, source_file_path, asset_file_type,
     :param asset_file_header:
     :return:
     """
-    if asset_file_type == 'csv' and asset_file_header == True:
-        source_df = spark.read.csv(path=source_file_path,
-                                   sep=asset_file_delim,
-                                   header=True,
-                                   inferSchema=True)
-    elif asset_file_type == 'csv' and asset_file_header == False:
+    if asset_file_type == "csv" and asset_file_header == True:
         source_df = spark.read.csv(
-            path=source_file_path,
-            sep=asset_file_delim
+            path=source_file_path, sep=asset_file_delim, header=True, inferSchema=True
         )
+    elif asset_file_type == "csv" and asset_file_header == False:
+        source_df = spark.read.csv(path=source_file_path, sep=asset_file_delim)
     elif asset_file_type == "parquet":
         source_df = spark.read.parquet(source_file_path)
     elif asset_file_type == "json":
@@ -77,7 +73,7 @@ class DecimalEncoder(json.JSONEncoder):
 
 
 def dynamodbJsonToDict(dynamodbJson):
-    for i in dynamodbJson['Items']:
+    for i in dynamodbJson["Items"]:
         items = json.dumps(i, cls=DecimalEncoder)
     return json.loads(items)
 
@@ -92,27 +88,22 @@ def store_to_s3(data_type, bucket, key, data):
     :param data: the dataframe object
     :return:
     """
-    if data_type == 'json':
-        s3 = boto3.client('s3')
+    if data_type == "json":
+        s3 = boto3.client("s3")
         json_object = data
-        s3.put_object(
-            Body=json.dumps(json_object),
-            Bucket=bucket,
-            Key=key
-        )
-    elif data_type == 'dataframe':
+        s3.put_object(Body=json.dumps(json_object), Bucket=bucket, Key=key)
+    elif data_type == "dataframe":
         csv_buffer = StringIO()
         data.to_csv(csv_buffer)
-        s3_resource = boto3.resource('s3')
+        s3_resource = boto3.resource("s3")
         try:
             s3_resource.Object(bucket, key).put(Body=csv_buffer.getvalue())
-            print(
-                "stored DF to bucket -> {0} with key -> {1}".format(bucket, key))
+            print("stored DF to bucket -> {0} with key -> {1}".format(bucket, key))
         except Exception as e:
             print(e)
 
 
-def get_metadata(table, region='us-east-1'):
+def get_metadata(table, region="us-east-1"):
     """
     Get the metadata from dynamoDB to find which checks to run for which columns
     :param table: The DynamoDB table name
@@ -121,8 +112,8 @@ def get_metadata(table, region='us-east-1'):
     """
     temp_dict = dict()
     response_list = list()
-    client = boto3.client('dynamodb', region_name=region)
-    response = client.scan(TableName=table)['Items']
+    client = boto3.client("dynamodb", region_name=region)
+    response = client.scan(TableName=table)["Items"]
     for item in response:
         for k, v in item.items():
             temp_dict[k] = list(v.values())[0]

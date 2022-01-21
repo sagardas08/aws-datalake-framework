@@ -9,19 +9,16 @@ from .dqConfig import Config
 
 def run_profiler(spark, df):
     print("Running Profiler")
-    result = ColumnProfilerRunner(spark) \
-        .onData(df) \
-        .run()
+    result = ColumnProfilerRunner(spark).onData(df).run()
     for col, profile in result.profiles.items():
         print(profile)
 
 
 def run_constraint_suggestion(spark, df):
     print("Running constraint suggestions")
-    suggestionResult = ConstraintSuggestionRunner(spark) \
-        .onData(df) \
-        .addConstraintRule(DEFAULT()) \
-        .run()
+    suggestionResult = (
+        ConstraintSuggestionRunner(spark).onData(df).addConstraintRule(DEFAULT()).run()
+    )
     # Json format
     return json.dumps(suggestionResult, indent=2)
 
@@ -34,7 +31,7 @@ def get_configs(config_file_path):
     :return: Dict of configs
     """
     data = None
-    with open(config_file_path, 'r') as f:
+    with open(config_file_path, "r") as f:
         data = json.load(f)
     f.close()
     return data
@@ -89,9 +86,9 @@ def generate_assertion(constraint, value=None):
     :param value: Value for the lambda func
     :return: String object
     """
-    if constraint == 'lambda' and value is not None:
+    if constraint == "lambda" and value is not None:
         return f"lambda x: x < {value}"
-    elif constraint == 'data_type':
+    elif constraint == "data_type":
         return dq_dtype(value)
 
 
@@ -103,26 +100,28 @@ def generate_code(responses):
     """
     check_list = list()
     for ob in responses:
-        column = ob['col_nm']
+        column = ob["col_nm"]
         # Null check
-        if ob['nullable']:
-            null_check = build_constraint(column, None, 'null')
+        if ob["nullable"]:
+            null_check = build_constraint(column, None, "null")
             check_list.append(null_check)
         # Primary key check
-        if ob['pk_ind']:
-            pk_check = build_constraint(column, None, 'pk')
+        if ob["pk_ind"]:
+            pk_check = build_constraint(column, None, "pk")
             check_list.append(pk_check)
         # Max length check
-        if int(ob['col_length']) != 0:
-            length = ob['col_length']
-            len_assertion = generate_assertion('lambda', length)
-            length_check = build_constraint(column, len_assertion, 'max_length')
+        if int(ob["col_length"]) != 0:
+            length = ob["col_length"]
+            len_assertion = generate_assertion("lambda", length)
+            length_check = build_constraint(column, len_assertion, "max_length")
             check_list.append(length_check)
         # Data type check
-        data_assertion = generate_assertion('data_type', ob['data_type'])
-        data_type_check = build_constraint(column, data_assertion, 'data_type')
+        data_assertion = generate_assertion("data_type", ob["data_type"])
+        data_type_check = build_constraint(column, data_assertion, "data_type")
         check_list.append(data_type_check)
     # Creating a unified string of Pydeequ checks
     parsed_checks = "".join(check_list)
-    parsed_code = "checkOutput = VerificationSuite(spark).onData(source_df).addCheck(check{0}).run()".format(parsed_checks)
+    parsed_code = "checkOutput = VerificationSuite(spark).onData(source_df).addCheck(check{0}).run()".format(
+        parsed_checks
+    )
     return parsed_code

@@ -4,7 +4,7 @@ class Config:
         "null": ".isComplete",
         "pk": ".isUnique",
         "data_type": ".hasDataType",
-        "max_length": ".hasMaxLength"
+        "max_length": ".hasMaxLength",
     }
 
     @staticmethod
