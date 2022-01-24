@@ -18,7 +18,7 @@ import base64
 from botocore.exceptions import ClientError
 import sys
 from awsglue.utils import getResolvedOptions
-
+from utils.capeprivacyUtils import *
 from utils.comUtils import *
 from utils.dqUtils import *
 
