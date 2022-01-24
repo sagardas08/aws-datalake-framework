@@ -3,6 +3,8 @@ import decimal
 import boto3
 import pydeequ
 from pyspark.sql import SparkSession
+import base64
+from botocore.exceptions import ClientError
 
 # utility function that returns spark object
 def get_spark():
