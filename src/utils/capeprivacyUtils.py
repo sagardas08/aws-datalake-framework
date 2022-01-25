@@ -16,7 +16,7 @@ def run_data_masking(spark,source_df,metadata):
   tokenize = Tokenizer()
   for i in metadata:
     for a,b in i.items():
-        if a=="req_tokenization" and b==False:
+        if a=="req_tokenization" and b==True:
             col_name=i.get("col_nm")
             source_df = source_df.withColumn(col_name, tokenize(functions.col(col_name)))
   return source_df
