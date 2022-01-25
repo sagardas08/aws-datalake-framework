@@ -1,10 +1,12 @@
-import json, ast, decimal, sys, logging
+import sys
+from boto3.dynamodb.conditions import Key
+from awsglue.utils import getResolvedOptions
 from utils.comUtils import *
 from utils.capeprivacyUtils import *
 
 
 
-spark = get_spark()
+spark = get_spark_for_masking()
 
 """
 Capturing source information parameters from the step function. Parameters:
