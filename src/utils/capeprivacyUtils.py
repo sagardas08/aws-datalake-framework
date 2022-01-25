@@ -1,26 +1,16 @@
-import json
 import cape_privacy as cape
-import pandas as pd
 from cape_privacy.spark import dtypes
-from cape_privacy.spark.transformations import ColumnRedact
-from cape_privacy.spark.transformations import DatePerturbation
-from cape_privacy.spark.transformations import NumericPerturbation
-from cape_privacy.spark.transformations import NumericRounding
-from cape_privacy.spark.transformations import Tokenizer
-from pyspark.sql.functions import col,lit, udf
-from cape_privacy.spark.transformations.tokenizer import ReversibleTokenizer
-from cape_privacy.spark.transformations.tokenizer import TokenReverser
+from cape_privacy.spark.transformations import ColumnRedact,DatePerturbation,NumericPerturbation,NumericRounding,Tokenizer
+from cape_privacy.spark.transformations.tokenizer import ReversibleTokenizer,TokenReverser
 from pyspark import sql
 from pyspark.sql import functions
-from datetime import datetime, date
-from pyspark.sql import Row
-from pyspark.sql import SparkSession
-import boto3
-from boto3.dynamodb.conditions import Key
-import base64
-from botocore.exceptions import ClientError
-from utils.comUtils import *
 
+def get_spark_for_masking():
+    sess = sql.SparkSession.builder \
+        .getOrCreate()
+    sess = cape.spark.configure_session(sess)
+    return sess
+    
 def run_data_masking(spark,source_df,metadata):
   #key=get_secret()
   tokenize = Tokenizer()
