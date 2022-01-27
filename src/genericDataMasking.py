@@ -46,6 +46,7 @@ source_df = create_spark_df(
 )
 source_df.printSchema()
 metadata = get_metadata(metadata_table, region)
-result=run_data_masking(spark,source_df,metadata)
+key=get_secret()
+result=run_data_masking(spark,source_df,metadata,key)
 result.show()
 stop_spark(spark)
