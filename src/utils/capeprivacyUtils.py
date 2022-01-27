@@ -12,19 +12,21 @@ def get_spark_for_masking():
     return sess
     
 def run_data_masking(spark,source_df,metadata,key):
-  tokenize = Tokenizer(key=key)
-  
-  for i in metadata:
-    for a,b in i.items():
-        if a=="req_tokenization" and b==True:
-            col_name=i.get("col_nm")
-            source_df = source_df.withColumn(col_name, tokenize(functions.col(col_name)))
-        if a=="req_redaction" and b==True:
-            col_name=i.get("col_nm")
-            redact_list=[]
-            redact_list.append(col_name)
-            redact = ColumnRedact(columns=redact_list)
-            df = redact(df)
-  return source_df
+    for i in metadata:
+      for a,b in i.items():
+          if a=="req_tokenization" and b==True:
+              col_name=i.get("col_nm")
+              tokenize = Tokenizer(key=key)
+              source_df = source_df.withColumn(col_name, tokenize(functions.col(col_name)))
+          if a=="req_redaction" and b==True:
+              col_name=i.get("col_nm")
+              redact_list=[]
+              redact_list.append(col_name)
+              redact = ColumnRedact(columns=redact_list)
+              df = redact(df)
+          if a=="req_tokenization" and b==True:
+              col_name=i.get("col_nm")
+              source_df = source_df.withColumn(col_name, tokenize(functions.col(col_name)))
+    return source_df
        
     
