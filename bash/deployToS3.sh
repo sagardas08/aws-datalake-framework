@@ -10,7 +10,6 @@ export script_path=$(readlink -f "$0")
 export project_name="aws-datalake-framework"
 export project_parent_dir=$(echo ${script_path} | awk -F "${project_name}" '{print $1}')
 export fm_prefix=$(cat ${project_parent_dir}/${project_name}/config/globalConfig.json | jq -r ".fm_prefix")
-echo $fm_prefix
 
 cd ${project_parent_dir}
 rm -rf ${project_name}-temp
