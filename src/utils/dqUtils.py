@@ -125,3 +125,4 @@ def generate_code(responses):
         parsed_checks
     )
     return parsed_code
+
