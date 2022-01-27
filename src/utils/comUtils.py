@@ -80,6 +80,22 @@ def store_to_s3(data_type, bucket, key, data):
     except Exception as e:
       print(e)
       
+def store_sparkdf_to_s3(dataframe,target_path,asset_file_type,asset_file_delim,asset_file_header):
+  s3 = boto3.client('s3')
+  if asset_file_type=='csv':
+    target_path = target_path.replace("s3://", "s3a://")
+    dataframe.coalesce(1).write.option("header",asset_file_header).option("delimiter",asset_file_delim).csv(target_path)
+  if asset_file_type=='parquet':
+    target_path = target_path.replace("s3://", "s3a://")
+    dataframe.coalesce(1).write.parquet(target_path)
+  if asset_file_type=='json':
+    target_path = target_path.replace("s3://", "s3a://")
+    dataframe.write.json(target_path)
+  if asset_file_type=='orc':
+    target_path = target_path.replace("s3://", "s3a://")
+    dataframe.write.orc(target_path)
+    
+    
 #Utility function to get secret key from secrets manager for tokenising in data masking      
 def get_secret():
 
@@ -128,3 +144,5 @@ def get_secret():
             return key
         else:
             decoded_binary_secret = base64.b64decode(get_secret_value_response['SecretBinary'])
+  
+
