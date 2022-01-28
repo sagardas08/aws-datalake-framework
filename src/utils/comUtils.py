@@ -161,7 +161,7 @@ def move_source_file(dq_result, source_file_path):
         
 #utility method to store a Spark dataframe to S3 bucket
 def store_sparkdf_to_s3(dataframe,target_path,asset_file_type,asset_file_delim,asset_file_header):
-   """
+    """
     
     :param dataframe: The spark dataframe
     :param target_path: The S3 URI
@@ -186,8 +186,8 @@ def store_sparkdf_to_s3(dataframe,target_path,asset_file_type,asset_file_delim,a
         dataframe.coalesce(1).write.orc(target_path)
     
     
-    #Utility function to get secret key from secrets manager for tokenising in data masking      
-    def get_secret():
+#Utility function to get secret key from secrets manager for tokenising in data masking      
+def get_secret():
 
     secret_name = "cape_privacy_key"
     region_name = "us-east-2"
