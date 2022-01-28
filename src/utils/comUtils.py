@@ -158,6 +158,7 @@ def move_source_file(dq_result, source_file_path):
         move_file(source_file_path)
     else:
         print("No failures found.")
+        
 #utility method to store a Spark dataframe to S3 bucket
 def store_sparkdf_to_s3(dataframe,target_path,asset_file_type,asset_file_delim,asset_file_header):
    """
@@ -169,24 +170,24 @@ def store_sparkdf_to_s3(dataframe,target_path,asset_file_type,asset_file_delim,a
     :param asset_file_header: The header true/false
     :return:
     """
-  target_path = target_path.replace("s3://", "s3a://")
-  timestamp = str(datetime.now())
-  splitlist=timestamp.split(".")
-  timestamp=splitlist[0]
-  timestamp=timestamp.replace(" ","").replace(":","").replace("-","")
-  target_path=target_path+timestamp+"/"
-  if asset_file_type=='csv':
-    dataframe.coalesce(1).write.option("header",asset_file_header).option("delimiter",asset_file_delim).csv(target_path)
-  if asset_file_type=='parquet':
-    dataframe.coalesce(1).write.parquet(target_path)
-  if asset_file_type=='json':
-    dataframe.coalesce(1).write.json(target_path)
-  if asset_file_type=='orc':
-    dataframe.coalesce(1).write.orc(target_path)
+    target_path = target_path.replace("s3://", "s3a://")
+    timestamp = str(datetime.now())
+    splitlist=timestamp.split(".")
+    timestamp=splitlist[0]
+    timestamp=timestamp.replace(" ","").replace(":","").replace("-","")
+    target_path=target_path+timestamp+"/"
+    if asset_file_type=='csv':
+        dataframe.coalesce(1).write.option("header",asset_file_header).option("delimiter",asset_file_delim).csv(target_path)
+    if asset_file_type=='parquet':
+        dataframe.coalesce(1).write.parquet(target_path)
+    if asset_file_type=='json':
+        dataframe.coalesce(1).write.json(target_path)
+    if asset_file_type=='orc':
+        dataframe.coalesce(1).write.orc(target_path)
     
     
-#Utility function to get secret key from secrets manager for tokenising in data masking      
-def get_secret():
+    #Utility function to get secret key from secrets manager for tokenising in data masking      
+    def get_secret():
 
     secret_name = "cape_privacy_key"
     region_name = "us-east-2"
