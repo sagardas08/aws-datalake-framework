@@ -11,7 +11,7 @@ def get_spark_for_masking():
     sess = cape.spark.configure_session(sess)
     return sess
     
-def run_data_masking(spark,source_df,metadata,key):
+def run_data_masking(source_df,metadata,key):
     tokenize = Tokenizer(key=key)
     perturb_numeric = NumericPerturbation(dtype=dtypes.Integer, min=-10, max=10)
     perturb_date = DatePerturbation(frequency=("YEAR", "MONTH", "DAY"), min=(-10, -5, -5), max=(10, 5, 5))
