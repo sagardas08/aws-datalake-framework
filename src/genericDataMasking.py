@@ -47,6 +47,7 @@ source_df = create_spark_df(
 source_df.printSchema()
 metadata = get_metadata(metadata_table, region)
 key=get_secret()
-result=run_data_masking(spark,source_df,metadata,key)
+result=run_data_masking(source_df,metadata,key)
 result.show()
+store_sparkdf_to_s3(source_df,target_path,asset_file_type,asset_file_delim,asset_file_header)
 stop_spark(spark)
