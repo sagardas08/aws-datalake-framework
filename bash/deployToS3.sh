@@ -35,7 +35,7 @@ aws glue create-job \
   --default-arguments "{ \
     \"--extra-py-files\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/dependencies/pydeequ.zip,s3://dl-fmwrk-code-$region/aws-datalake-framework/dependencies/utils.zip\", \
     \"--extra-jars\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/dependencies/deequ-1.0.3.jar\", \
-    \"--TempDir\": \"s3://${fm_prefix}-code-$region/temporary/\" \,
+    \"--TempDir\": \"s3://${fm_prefix}-code-$region/temporary/\", \
     \"--extra-files\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/config/globalConfig.json\" \
     }"\
   --glue-version 2.0 \
@@ -52,9 +52,9 @@ aws glue create-job \
     \"ScriptLocation\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/src/genericDataMasking.py\" \
     }" \
   --default-arguments "{ \
-    \"--TempDir\": \"s3://${fm_prefix}-code-$region/temporary/\" \,
-    \"--extra-files\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/config/globalConfig.json\" \,
-    \"--additional-python-modules\": \"Crypto,packaging,rfc3339,cape-privacy[spark]\" \,
+    \"--TempDir\": \"s3://${fm_prefix}-code-$region/temporary/\", \
+    \"--extra-files\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/config/globalConfig.json\", \
+    \"--additional-python-modules\": \"Crypto,packaging,rfc3339,cape-privacy[spark]\", \
     \"--python-modules-installer-option\": \"--upgrade\" \
     }"\
   --glue-version 2.0 \
