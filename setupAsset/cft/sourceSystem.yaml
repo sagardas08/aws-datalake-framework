@@ -1,33 +1,83 @@
 AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  CurrentRegion:
+    Type: String
+    Default: us-east-1
+  DlFmwrkPrefix:
+    Type: String
+    Default: dl-fmwrk
+  AwsAccount:
+    Type: String
+    Default: "076931226898"
+  DlFmwrkSrcInfoLambdaName:
+    Type: String
+    Default: dlFmwrkSrcDataInfo
+  srcSysId:
+    Type: Number
+    Default: 99999999
+
 Resources:
-  S3Bucket:
-    Type: 'AWS::S3::Bucket'
+  SourceSystemS3Bucket:
+    Type: AWS::S3::Bucket
     Properties: 
-      BucketEncryption: ServerSideEncryptionByDefault
-      BucketName: dl-fmwrk-xxxxx-us-east-1
+      BucketEncryption: 
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      BucketName: !Join ["", [!Ref DlFmwrkPrefix, "-", !Ref srcSysId, "-", !Ref CurrentRegion]]
 
-  Type: AWS::SNS::Topic
-  Properties: 
-    DisplayName: dl-fmwrk-xxxxx-init-file-creation
-    Subscription: 
-    - Endpoint: arn:aws:lambda:us-east-1:076931226898:function:dlFmwrkSrcDataInfo
-    - Protocol: Lambda
-    Tags: 
-    - Key: project
-    - Value: aws-datalake-framework
-    TopicName: dl-fmwrk-xxxxx-init-file-creation
+  SourceSystemSNS:
+    Type: AWS::SNS::Topic
+    Properties: 
+      DisplayName: !Join ["", [!Ref DlFmwrkPrefix, "-", !Ref srcSysId, "-", init-file-creation]]
+      Subscription: 
+      - Endpoint: !Join ["", ["arn:aws:lambda:", !Ref CurrentRegion, ":", !Ref AwsAccount, ":function:", !Ref DlFmwrkSrcInfoLambdaName]]
+        Protocol: lambda
+      #Tags: 
+      #- Key: project
+      #  Value: aws-datalake-framework
+      TopicName: !Join ["", [!Ref DlFmwrkPrefix, "-", !Ref srcSysId, "-", init-file-creation]]
 
-  Type: AWS::SNS::TopicPolicy
-  Properties:
-    PolicyDocument:
-      Id: dlFmwrkTopicId
-      Version: '2012-10-17'
-      Statement:
-      - Sid: SNS Topic Policy for createObject event in S3
-        Effect: Allow
-        Principal:
-          Service: s3.amazonaws.com
-        Action: sns:Publish
-        Resource: "arn:aws:sns:us-east-1:076931226898:dl-fmwrk-xxxxx-init-file-creation"
-    Topics:
-    - !Ref mytopic
+  SNSPolicy:
+    Type: AWS::SNS::TopicPolicy
+    DependsOn: SourceSystemSNS
+    Properties:
+      PolicyDocument:
+        Id: dlFmwrkTopicId
+        Statement:
+        - Sid: SNS Topic Policy for createObject event in S3
+          Effect: Allow
+          Principal:
+            Service: s3.amazonaws.com
+          Action: sns:Publish
+          Resource: "*"
+      Topics:
+      - !Ref SourceSystemSNS
+
+  LambdaInvokePermission: 
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      Principal: sns.amazonaws.com
+      SourceArn:  !Ref SourceSystemSNS 
+      FunctionName: !Join ["", ["arn:aws:lambda:", !Ref CurrentRegion, ":", !Ref AwsAccount, ":function:", !Ref DlFmwrkSrcInfoLambdaName]]
+
+
+  #SourceSystemIamUser:
+  #  Type: AWS::IAM::User
+  #  Properties:
+  #    Path: !Join ["", ["/", !Ref DlFmwrkPrefix, "-src-sys-users/"]]
+  #    UserName: !Ref srcSysId
+  #    Policies:
+  #    - PolicyName: !Join ["", [!Ref DlFmwrkPrefix, "-src-sys-", !Ref srcSysId, "-policy"]]
+  #      PolicyDocument:
+  #        Statement:
+  #        - Effect: Allow
+  #          Action: s3:PutObject
+  #          Resource: !Join ["", [!Ref DlFmwrkPrefix, "-", !Ref srcSysId, "-", "*/*/init/*/"]]
+
+  #SourceSystemIamUserKey:
+  #  Type: AWS::IAM::AccessKey
+  #  Properties:
+  #    UserName: !Ref SourceSystemIamUser
+    
