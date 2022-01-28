@@ -1,5 +1,6 @@
 import json
 import decimal
+from datetime import datetime
 from io import StringIO
 
 import boto3
@@ -120,3 +121,41 @@ def get_metadata(table, region="us-east-1"):
         response_list.append(temp_dict)
         dct = {}
     return response_list
+
+
+def check_failure(dataframe):
+    """
+
+    :param dataframe:
+    :return:
+    """
+    df_fail = dataframe.filter(dataframe.constraint_status == 'Success')
+    num_fails = df_fail.count()
+    if num_fails >= 1:
+        return True
+    return False
+
+
+def move_file(path):
+    word_list = path.split("/")
+    bucket = word_list[2]
+    file_name = word_list[-1]
+    source_key = '/'.join(word_list[3:])
+    time = datetime.today().strftime("%Y%m%d%H%M%S")
+    destination_key = word_list[3] + f'/Error/{time}/{file_name}'
+    copy_source = {
+        'Bucket': bucket,
+        'Key': source_key
+    }
+    s3 = boto3.resource('s3')
+    s3.meta.client.copy(copy_source, bucket, destination_key)
+    s3.Object(bucket,source_key).delete()
+    print(f"Moved the file {file_name} to {destination_key}")
+
+
+def move_source_file(dq_result, source_file_path):
+    failure = check_failure(dq_result)
+    if failure:
+        move_file(source_file_path)
+    else:
+        print("No failures found.")
