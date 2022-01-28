@@ -1,7 +1,7 @@
 import json
 import decimal
+from datetime import datetime
 from io import StringIO
- from datetime import datetime
 import boto3
 import pydeequ
 from pyspark.sql import SparkSession
@@ -35,6 +35,7 @@ def create_spark_df(
     spark, source_file_path, asset_file_type, asset_file_delim, asset_file_header
 ):
     """
+
     :param spark:
     :param source_file_path:
     :param asset_file_type:
@@ -119,7 +120,44 @@ def get_metadata(table, region="us-east-1"):
         response_list.append(temp_dict)
         dct = {}
     return response_list
-  
+
+
+def check_failure(dataframe):
+    """
+
+    :param dataframe:
+    :return:
+    """
+    df_fail = dataframe.filter(dataframe.constraint_status == 'Success')
+    num_fails = df_fail.count()
+    if num_fails >= 1:
+        return True
+    return False
+
+
+def move_file(path):
+    word_list = path.split("/")
+    bucket = word_list[2]
+    file_name = word_list[-1]
+    source_key = '/'.join(word_list[3:])
+    time = datetime.today().strftime("%Y%m%d%H%M%S")
+    destination_key = word_list[3] + f'/Error/{time}/{file_name}'
+    copy_source = {
+        'Bucket': bucket,
+        'Key': source_key
+    }
+    s3 = boto3.resource('s3')
+    s3.meta.client.copy(copy_source, bucket, destination_key)
+    s3.Object(bucket,source_key).delete()
+    print(f"Moved the file {file_name} to {destination_key}")
+
+
+def move_source_file(dq_result, source_file_path):
+    failure = check_failure(dq_result)
+    if failure:
+        move_file(source_file_path)
+    else:
+        print("No failures found.")
 #utility method to store a Spark dataframe to S3 bucket
 def store_sparkdf_to_s3(dataframe,target_path,asset_file_type,asset_file_delim,asset_file_header):
    """
