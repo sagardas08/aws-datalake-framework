@@ -79,20 +79,27 @@ def store_to_s3(data_type, bucket, key, data):
         "stored DF to bucket -> {0} with key -> {1}".format(bucket, key))
     except Exception as e:
       print(e)
-      
+  
+#utility method to store a Spark dataframe to S3 bucket
 def store_sparkdf_to_s3(dataframe,target_path,asset_file_type,asset_file_delim,asset_file_header):
+   """
+    
+    :param dataframe: The spark dataframe
+    :param target_path: The S3 URI
+    :param asset_file_type: Type of the file that the dataframe should be written as
+    :param asset_file_delim: The delimiter
+    :param asset_file_header: The header true/false
+    :return:
+    """
   s3 = boto3.client('s3')
+  target_path = target_path.replace("s3://", "s3a://")
   if asset_file_type=='csv':
-    target_path = target_path.replace("s3://", "s3a://")
     dataframe.coalesce(1).write.option("header",asset_file_header).option("delimiter",asset_file_delim).csv(target_path)
   if asset_file_type=='parquet':
-    target_path = target_path.replace("s3://", "s3a://")
     dataframe.coalesce(1).write.parquet(target_path)
   if asset_file_type=='json':
-    target_path = target_path.replace("s3://", "s3a://")
     dataframe.write.json(target_path)
   if asset_file_type=='orc':
-    target_path = target_path.replace("s3://", "s3a://")
     dataframe.write.orc(target_path)
     
     
