@@ -35,7 +35,7 @@ def run_data_masking(source_df,metadata,key):
               source_df = source_df.withColumn(col_name, perturb_numeric(functions.col(col_name)))
           if a=="req_numericrounding" and b==True:
               col_name=i.get("col_nm")
-              source_df = source_df.withColumn(col_name, round_numeric(functions.col(col_name))
+              source_df = source_df.withColumn(col_name, round_numeric(functions.col(col_name)))
     return source_df
        
     
