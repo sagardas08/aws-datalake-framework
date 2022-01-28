@@ -91,7 +91,7 @@ def store_sparkdf_to_s3(dataframe,target_path,asset_file_type,asset_file_delim,a
     :param asset_file_header: The header true/false
     :return:
     """
-  s3 = boto3.client('s3')
+  #s3 = boto3.client('s3')
   target_path = target_path.replace("s3://", "s3a://")
   if asset_file_type=='csv':
     dataframe.coalesce(1).write.option("header",asset_file_header).option("delimiter",asset_file_delim).csv(target_path)
