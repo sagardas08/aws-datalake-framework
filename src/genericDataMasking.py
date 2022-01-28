@@ -49,5 +49,7 @@ metadata = get_metadata(metadata_table, region)
 key=get_secret()
 result=run_data_masking(source_df,metadata,key)
 result.show()
+target_path="s3://dl-fmwrk-10000-us-east-1/11001/masked/"
 store_sparkdf_to_s3(source_df,target_path,asset_file_type,asset_file_delim,asset_file_header)
+print("The dataframe is stored to s3")
 stop_spark(spark)
