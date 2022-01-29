@@ -46,7 +46,7 @@ source_df = create_spark_df(
 )
 source_df.printSchema()
 metadata = get_metadata(metadata_table, region)
-key=get_secret()
+key=get_secret(secret_name,"us-east-2")
 result=run_data_masking(source_df,metadata,key)
 result.show()
 target_path=source_path+"/masked/"
