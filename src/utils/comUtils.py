@@ -187,10 +187,10 @@ def store_sparkdf_to_s3(dataframe,target_path,asset_file_type,asset_file_delim,a
     
     
 #Utility function to get secret key from secrets manager for tokenising in data masking      
-def get_secret():
+def get_secret(secretname,regionname):
 
-    secret_name = "cape_privacy_key"
-    region_name = "us-east-2"
+    secret_name = secretname
+    region_name = regionname
 
     # Create a Secrets Manager client
     session = boto3.session.Session()
