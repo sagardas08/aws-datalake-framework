@@ -3,7 +3,7 @@ from boto3.dynamodb.conditions import Key
 from awsglue.utils import getResolvedOptions
 from utils.comUtils import *
 from utils.capeprivacyUtils import *
-from config.globalConfig import secret_name
+
 
 spark = get_spark_for_masking()
 
@@ -45,7 +45,9 @@ source_df = create_spark_df(
 )
 source_df.printSchema()
 metadata = get_metadata(metadata_table, region)
-key=get_secret(secret_name,"us-east-2")
+with open('globalConfig.json', 'r') as config:
+    config = json.load(config)
+key=get_secret(config["secret_name"],"us-east-2")
 result=run_data_masking(source_df,metadata,key)
 result.show()
 target_path=source_path+"/masked/"
