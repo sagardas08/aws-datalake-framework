@@ -1,4 +1,5 @@
 import sys
+import json
 from boto3.dynamodb.conditions import Key
 from awsglue.utils import getResolvedOptions
 from utils.comUtils import *
@@ -22,20 +23,22 @@ source_id = args["source_id"]
 asset_id = args["asset_id"]
 
 """
-Pulling the data asset information from dynamoDB table dl_fmwrk.data_asset 
+Pulling the data asset information from dynamoDB table dl-fmwrk.data_asset 
 based on the Asset ID
 """
-region = "us-east-2"
+region = "us-east-1"
 dynamodb = boto3.resource("dynamodb", region_name=region)
-asset_info = dynamodb.Table("dl_fmwrk.data_asset")
+asset_info = dynamodb.Table("dl-fmwrk.data_asset")
 asset_info_items = asset_info.query(
     KeyConditionExpression=Key("asset_id").eq(int(asset_id))
 )
+
 items = dynamodbJsonToDict(asset_info_items)
 asset_file_type = items["file_type"]
 asset_file_delim = items["file_delim"]
 asset_file_header = items["file_header"]
-metadata_table = f"dl_fmwrk.data_asset.{asset_id}"
+metadata_table = f"dl-fmwrk.data_asset.{asset_id}"
+
 """
 Create dataframe using the source data asset
 """
