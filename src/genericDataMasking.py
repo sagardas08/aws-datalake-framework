@@ -3,8 +3,7 @@ from boto3.dynamodb.conditions import Key
 from awsglue.utils import getResolvedOptions
 from utils.comUtils import *
 from utils.capeprivacyUtils import *
-
-
+from config.globalConfig import secret_name
 
 spark = get_spark_for_masking()
 
