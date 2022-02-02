@@ -46,14 +46,12 @@ source_file_path = source_path.replace("s3://", "s3a://")
 source_df = create_spark_df(
     spark, source_file_path, asset_file_type, asset_file_delim, asset_file_header
 )
-source_df.printSchema()
 metadata = get_metadata(metadata_table, region)
 with open('globalConfig.json', 'r') as config:
     config = json.load(config)
 key=get_secret(config["secret_name"],"us-east-2")
 result=run_data_masking(source_df,metadata,key)
-result.show()
 target_path=source_path+"/masked/"
-store_sparkdf_to_s3(source_df,target_path,asset_file_type,asset_file_delim,asset_file_header)
+store_sparkdf_to_s3(result,target_path,asset_file_type,asset_file_delim,asset_file_header)
 print("The dataframe is stored to s3")
 stop_spark(spark)
