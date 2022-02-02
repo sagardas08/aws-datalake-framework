@@ -34,6 +34,7 @@ aws glue create-job \
     }" \
   --default-arguments "{ \
     \"--extra-py-files\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/dependencies/pydeequ.zip,s3://dl-fmwrk-code-$region/aws-datalake-framework/dependencies/utils.zip\", \
+    \"--extra-files\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/config/globalConfig.json\", \
     \"--extra-jars\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/dependencies/deequ-1.0.3.jar\", \
     \"--TempDir\": \"s3://${fm_prefix}-code-$region/temporary/\" \
     }"\
