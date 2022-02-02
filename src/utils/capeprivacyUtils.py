@@ -34,8 +34,6 @@ def run_data_masking(source_df, metadata, key, logger=None):
         for a, b in i.items():
             if a == "req_tokenization" and (str(b) == "True" or str(b) == "true"):
                 col_name = i.get("col_nm")
-                print("inside tokenization")
-                print(col_nm)
                 source_df = source_df.withColumn(col_name, tokenize(functions.col(col_name)))                
             if a == "req_redaction" and (str(b) == "True" or str(b) == "true"):
                 col_name = i.get("col_nm")
