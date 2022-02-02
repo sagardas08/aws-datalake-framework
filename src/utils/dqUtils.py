@@ -5,6 +5,7 @@ from pydeequ.checks import *
 from pydeequ.verification import *
 from pydeequ.repository import *
 from .dqConfig import Config
+from .logger import log
 
 
 def run_profiler(spark, df):
@@ -92,7 +93,8 @@ def generate_assertion(constraint, value=None):
         return dq_dtype(value)
 
 
-def generate_code(responses):
+@log
+def generate_code(responses, logger=None):
     """
     utility method to generate Pydeequ code based on asset metadata
     :param responses: A list of dictionary objects
@@ -125,4 +127,3 @@ def generate_code(responses):
         parsed_checks
     )
     return parsed_code
-

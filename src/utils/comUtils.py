@@ -1,14 +1,31 @@
 import json
 import decimal
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import StringIO
 
 import boto3
 import pydeequ
 from pyspark.sql import SparkSession
 
+from .logger import log
 
-def get_spark():
+
+def get_current_time():
+    time_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+    time_str = time_ist.strftime("%d-%m-%y %H:%M:%S")
+    return time_str
+
+
+def get_global_config():
+    config_file_path = "config/globalConfig.json"
+    file = open(file=config_file_path, mode="r")
+    config = json.load(file)
+    file.close()
+    return config
+
+
+@log
+def get_spark(logger=None):
     """
     Utility method to return a spark Session object initialized with Pydeequ jars
     :return: Spark Session Object
@@ -32,8 +49,14 @@ def stop_spark(spark):
     print("Stopping Spark Session")
 
 
+@log
 def create_spark_df(
-    spark, source_file_path, asset_file_type, asset_file_delim, asset_file_header
+    spark,
+    source_file_path,
+    asset_file_type,
+    asset_file_delim,
+    asset_file_header,
+    logger=None,
 ):
     """
 
@@ -79,7 +102,6 @@ def dynamodbJsonToDict(dynamodbJson):
     return json.loads(items)
 
 
-# utility function to store Pandas DF to S3
 def store_to_s3(data_type, bucket, key, data):
     """
     utility method to store a Pandas dataframe to S3 bucket
@@ -104,9 +126,11 @@ def store_to_s3(data_type, bucket, key, data):
             print(e)
 
 
-def get_metadata(table, region="us-east-1"):
+@log
+def get_metadata(table, region, logger=None):
     """
     Get the metadata from dynamoDB to find which checks to run for which columns
+    :param logger:
     :param table: The DynamoDB table name
     :param region: The AWS region for e.g. us-east-1
     :return:
@@ -123,39 +147,69 @@ def get_metadata(table, region="us-east-1"):
     return response_list
 
 
-def check_failure(dataframe):
+@log
+def check_failure(dataframe, logger):
     """
 
     :param dataframe:
+    :param logger:
     :return:
     """
-    df_fail = dataframe.filter(dataframe.constraint_status == 'Success')
+    df_fail = dataframe.filter(dataframe.constraint_status != "Success")
     num_fails = df_fail.count()
-    if num_fails >= 1:
+    if num_fails > 1:
+        if logger:
+            logger.write(
+                message=f"Found {num_fails} Failures. Attempting to move the file"
+            )
         return True
     return False
 
 
-def move_file(path):
+@log
+def move_file(path, logger=None):
+    """
+
+    :param path:
+    :param logger:
+    :return:
+    """
     word_list = path.split("/")
     bucket = word_list[2]
     file_name = word_list[-1]
-    source_key = '/'.join(word_list[3:])
-    time = datetime.today().strftime("%Y%m%d%H%M%S")
-    destination_key = word_list[3] + f'/Error/{time}/{file_name}'
-    copy_source = {
-        'Bucket': bucket,
-        'Key': source_key
-    }
-    s3 = boto3.resource('s3')
+    source_key = "/".join(word_list[3:])
+    curr_time = get_current_time()
+    destination_key = word_list[3] + f"/Error/{curr_time}/{file_name}"
+    copy_source = {"Bucket": bucket, "Key": source_key}
+    s3 = boto3.resource("s3")
     s3.meta.client.copy(copy_source, bucket, destination_key)
-    s3.Object(bucket,source_key).delete()
-    print(f"Moved the file {file_name} to {destination_key}")
+    s3.Object(bucket, source_key).delete()
+    if logger is not None:
+        logger.write(message=f"Moved the file {file_name} to {destination_key}")
 
 
-def move_source_file(dq_result, source_file_path):
-    failure = check_failure(dq_result)
-    if failure:
-        move_file(source_file_path)
-    else:
-        print("No failures found.")
+@log
+def move_source_file(
+    source_file_path, dq_result=None, schema_validation=None, logger=None
+):
+    """
+
+    :param source_file_path:
+    :param dq_result:
+    :param schema_validation:
+    :param logger:
+    :return:
+    """
+    if dq_result is not None:
+        failure = check_failure(dq_result, logger)
+        if failure:
+            move_file(source_file_path, logger)
+        else:
+            if logger:
+                logger.write(message="No failures found.")
+    elif not schema_validation:
+        move_file(source_file_path, logger)
+        if logger:
+            logger.write(
+                message="Moving the file to Error location due to schema irregularities"
+            )
