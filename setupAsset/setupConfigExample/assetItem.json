@@ -1,0 +1,14 @@
+{
+  "src_sys_id": 7416533097172425,
+  "target_id": 10101,
+  "file_header": true,
+  "multipartition": false,
+  "file_type": "csv",
+  "asset_nm": "WUR_review",
+  "subj_area_1": "Misc",
+  "support_cntct": "suprakash.nandy@tigeranalytics.com",
+  "trigger_file_pattern": "",
+  "subj_area_2": "reviews",
+  "asset_owner": "Suprakash Nandy",
+  "file_delim": ","
+}
