@@ -5,7 +5,7 @@ from cape_privacy.spark.transformations.tokenizer import ReversibleTokenizer,Tok
 from pyspark import sql
 from pyspark.sql import functions
 
-def get_spark_for_masking():
+def get_spark_for_masking(logger=None):
     sess = sql.SparkSession.builder \
         .getOrCreate()
     sess = cape.spark.configure_session(sess)
