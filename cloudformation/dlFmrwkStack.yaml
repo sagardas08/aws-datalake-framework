@@ -1,0 +1,7 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties: 
+      BucketEncryption: ServerSideEncryptionByDefault
+      BucketName: dl-fmwrk-10000-us-east-1

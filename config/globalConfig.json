@@ -1,0 +1,8 @@
+{
+  "aws_account": "076931226898",
+  "fm_prefix": "dl-fmwrk",
+  "primary_region": "us-east-1",
+  "secondary_region": "us-east-2",
+  "secret_name": "cape_privacy_key"
+}
+
