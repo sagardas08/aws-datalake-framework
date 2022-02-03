@@ -20,11 +20,15 @@ def get_global_config():
     return config
 
 
+# Get the arguments
 args = getResolvedOptions(sys.argv, ["source_path", "source_id", "asset_id", "exec_id"])
 source_path = args["source_path"]
 source_id = args["source_id"]
 asset_id = args["asset_id"]
 exec_id = args["exec_id"]
+# For pyspark dataframes we use s3a instead of s3
+source_file_path = source_path.replace("s3://", "s3a://")
+# Get the global config
 global_config = get_global_config()
 fm_prefix = global_config["fm_prefix"]
 metadata_table = f"{fm_prefix}.{asset_id}"
@@ -50,9 +54,9 @@ items = dynamodbJsonToDict(asset_info_items)
 asset_file_type = items["file_type"]
 asset_file_delim = items["file_delim"]
 asset_file_header = items["file_header"]
+data_catalog = f'{fm_prefix}.data_catalog.{asset_id}'
 # Create dataframe using the source data asset
 spark = get_spark(logger)
-source_file_path = source_path.replace("s3://", "s3a://")
 source_df = create_spark_df(
     spark,
     source_file_path,
@@ -69,18 +73,23 @@ schema_validation = validate_schema(
 if schema_validation:
     logger.write(message="Source Schema matches the expected schema")
     metadata = get_metadata(asset_metadata_table, region, logger=logger)
+    update_data_catalog(data_catalog, exec_id,
+                        dq_validation='Starting', logger=logger)
     dq_code = generate_code(metadata, logger=logger)
     check = Check(spark, CheckLevel.Warning, "Deequ Data Quality Checks")
     checkOutput = None
     logger.write(message="Executing the DQ code")
     exec(dq_code, globals())
     result = VerificationResult.checkResultsAsDataFrame(spark, checkOutput)
-    result.show()
-    move_source_file(source_file_path=source_path, dq_result=result, logger=logger)
+    result_s3_path = source_file_path.split(asset_id)[0] + f"{asset_id}/logs/{exec_id}/dq_results"
+    result.repartition(1).write.csv(result_s3_path, header=True)
+    update_data_catalog(data_catalog, exec_id,
+                        dq_validation='Completed', logger=logger)
+    move_source_file(path=source_path, dq_result=result, logger=logger)
 else:
     logger.write(message="Found schema irregularities")
-    move_source_file(source_file_path=source_path, schema_validation=False, logger=logger)
-# Code ends here -> Write the logs to an Output location.
+    move_source_file(path=source_path, schema_validation=False, logger=logger)
+# Code ends here: Write the logs to an Output location.
 stop_spark(spark)
 end_time = time.time()
 logger.write(message=f"End Time : {get_current_time()}")
