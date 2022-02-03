@@ -43,26 +43,6 @@ aws glue create-job \
   --number-of-workers 10 \
   --worker-type G.2X \
   --region $region
-
-aws glue delete-job --job-name ${fm_prefix}-data-masking --region $region
-aws glue create-job \
-  --name ${fm_prefix}-data-masking \
-  --role 2482-misc-service-role \
-  --command "{ \
-    \"Name\": \"glueetl\", \
-    \"ScriptLocation\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/src/genericDataMasking.py\" \
-    }" \
-  --default-arguments "{ \
-    \"--TempDir\": \"s3://${fm_prefix}-code-$region/temporary/\", \
-    \"--extra-files\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/config/globalConfig.json\", \
-    \"--additional-python-modules\": \"Crypto,packaging,rfc3339,cape-privacy[spark]\", \
-    \"--python-modules-installer-option\": \"--upgrade\" \
-    }"\
-  --glue-version 2.0 \
-  --number-of-workers 10 \
-  --worker-type G.2X \
-  --region $region
-
 exit 0
 
 
