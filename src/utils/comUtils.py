@@ -16,12 +16,30 @@ def get_current_time():
     return time_str
 
 
-def get_global_config():
-    config_file_path = "config/globalConfig.json"
-    file = open(file=config_file_path, mode="r")
-    config = json.load(file)
-    file.close()
-    return config
+@log
+def update_data_catalog(table_name, exec_id,
+                        dq_validation=None, data_masking=None,
+                        data_standardization=None, logger=None):
+    """
+
+    :param table_name:
+    :param exec_id:
+    :param dq_validation:
+    :param data_masking:
+    :param data_standardization:
+    :param logger:
+    :return:
+    """
+    table = boto3.resource('dynamodb').Table(table_name)
+    response = table.get_item(Key={'exec_id': exec_id})
+    item = response['Item']
+    if dq_validation:
+        item['dq_validation'] = dq_validation
+    elif data_masking:
+        item['data_masking'] = data_masking
+    elif data_standardization:
+        item['data_standardization'] = data_standardization
+    table.put_item(Item=item)
 
 
 @log
@@ -32,8 +50,8 @@ def get_spark(logger=None):
     """
     spark = (
         SparkSession.builder.config("spark.jars.packages", pydeequ.deequ_maven_coord)
-        .config("spark.jars.excludes", pydeequ.f2j_maven_coord)
-        .getOrCreate()
+            .config("spark.jars.excludes", pydeequ.f2j_maven_coord)
+            .getOrCreate()
     )
     return spark
 
@@ -51,12 +69,12 @@ def stop_spark(spark):
 
 @log
 def create_spark_df(
-    spark,
-    source_file_path,
-    asset_file_type,
-    asset_file_delim,
-    asset_file_header,
-    logger=None,
+        spark,
+        source_file_path,
+        asset_file_type,
+        asset_file_delim,
+        asset_file_header,
+        logger=None,
 ):
     """
 
@@ -65,8 +83,10 @@ def create_spark_df(
     :param asset_file_type:
     :param asset_file_delim:
     :param asset_file_header:
+    :param logger:
     :return:
     """
+    source_df = None
     if asset_file_type == "csv" and asset_file_header == True:
         source_df = spark.read.csv(
             path=source_file_path, sep=asset_file_delim, header=True, inferSchema=True
@@ -80,7 +100,7 @@ def create_spark_df(
     elif asset_file_type == "orc":
         source_df = spark.read.orc(source_file_path)
     try:
-        assert source_df != None
+        assert source_df is not None
         return source_df
     except AssertionError:
         print("Unable to read the data from the source")
@@ -100,30 +120,6 @@ def dynamodbJsonToDict(dynamodbJson):
     for i in dynamodbJson["Items"]:
         items = json.dumps(i, cls=DecimalEncoder)
     return json.loads(items)
-
-
-def store_to_s3(data_type, bucket, key, data):
-    """
-    utility method to store a Pandas dataframe to S3 bucket
-    :param data_type: The data type - Pandas / Spark
-    :param bucket: The S3 bucket
-    :param key: The final name of the file
-    :param data: the dataframe object
-    :return:
-    """
-    if data_type == "json":
-        s3 = boto3.client("s3")
-        json_object = data
-        s3.put_object(Body=json.dumps(json_object), Bucket=bucket, Key=key)
-    elif data_type == "dataframe":
-        csv_buffer = StringIO()
-        data.to_csv(csv_buffer)
-        s3_resource = boto3.resource("s3")
-        try:
-            s3_resource.Object(bucket, key).put(Body=csv_buffer.getvalue())
-            print("stored DF to bucket -> {0} with key -> {1}".format(bucket, key))
-        except Exception as e:
-            print(e)
 
 
 @log
@@ -157,10 +153,10 @@ def check_failure(dataframe, logger):
     """
     df_fail = dataframe.filter(dataframe.constraint_status != "Success")
     num_fails = df_fail.count()
-    if num_fails > 1:
+    if num_fails >= 1:
         if logger:
             logger.write(
-                message=f"Found {num_fails} Failures. Attempting to move the file"
+                message=f"Found {num_fails} Failures in the source file."
             )
         return True
     return False
@@ -176,39 +172,49 @@ def move_file(path, logger=None):
     """
     word_list = path.split("/")
     bucket = word_list[2]
-    file_name = word_list[-1]
-    source_key = "/".join(word_list[3:])
-    curr_time = get_current_time()
-    destination_key = word_list[3] + f"/Error/{curr_time}/{file_name}"
-    copy_source = {"Bucket": bucket, "Key": source_key}
-    s3 = boto3.resource("s3")
-    s3.meta.client.copy(copy_source, bucket, destination_key)
-    s3.Object(bucket, source_key).delete()
-    if logger is not None:
-        logger.write(message=f"Moved the file {file_name} to {destination_key}")
+    s3 = boto3.resource('s3')
+    s3_bucket = s3.Bucket(bucket)
+    source = '/'.join(path.split('/')[3:])
+    target = path.split('/')[3] + '/Errors'
+    for obj in s3_bucket.objects.filter(Prefix=source):
+        source_filename = obj.key.split('/')[-1]
+        print(obj.key)
+        print(source_filename)
+        copy_source = {
+            'Bucket': bucket,
+            'Key': obj.key
+        }
+        target_filename = "{}/{}".format(target, source_filename)
+        print(target_filename)
+        s3_bucket.copy(copy_source, target_filename)
+        s3.Object(bucket, obj.key).delete()
 
 
 @log
 def move_source_file(
-    source_file_path, dq_result=None, schema_validation=None, logger=None
+        path, dq_result=None, schema_validation=None, logger=None
 ):
     """
 
-    :param source_file_path:
+    :param path:
     :param dq_result:
     :param schema_validation:
     :param logger:
     :return:
     """
     if dq_result is not None:
+        # check for 'Failure' in the DQ results
         failure = check_failure(dq_result, logger)
         if failure:
-            move_file(source_file_path, logger)
+            # if there is even a single DQ fail then move the source file
+            logger.write(message="Attempting to move the file")
+            move_file(path, logger)
         else:
             if logger:
-                logger.write(message="No failures found.")
+                logger.write(message="No failures found")
     elif not schema_validation:
-        move_file(source_file_path, logger)
+        # in case the schema is not validated, move the source file to error location
+        move_file(path, logger)
         if logger:
             logger.write(
                 message="Moving the file to Error location due to schema irregularities"

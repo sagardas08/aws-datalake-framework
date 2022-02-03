@@ -27,6 +27,17 @@ class Logger:
         src_path=None,
         region=None,
     ):
+        """
+        Logger class to instantiate a logging object
+        :param level: The level of logging - info, debug, warn, critical
+        :param log_type: The type of logging required - C for console logs,
+        F for file logs, S/S3 for logs to be stored on S3
+        :param log_name: The name of the logger, defaults to root-logger
+        :param asset_id: The unique identifier of a data asset
+        :param src_path: the file path of the source data, used to structure the log output location in case the
+        log type is S3.
+        :param region: The AWS region - for e.g. us-east-1
+        """
         # log format -> 01/Feb/2022 16:06:56 - loggerName - LogLevel :
         self.formatter = Formatter(
             "%(asctime)s - %(name)s - %(levelname)s : %(message)s",
@@ -36,12 +47,16 @@ class Logger:
         self.log_type = log_type
         self.level = level
         self.region = region
-        self.log_name = log_name
+        self.log_name = log_name if log_name else 'root-logger'
         self.log_bucket = src_path.split("/")[2] if src_path else None
         self.file_name = f"{asset_id}/logs/{log_name}/{asset_id}_log.log" if asset_id and log_name else None
         self.logger = self._get_logger()
 
     def _get_logger(self):
+        """
+        Defines the different handlers in case of different log types
+        :return: logging object
+        """
         logger = getLogger(self.log_name)
         if self.log_type == "C":
             console_handler = StreamHandler()
@@ -51,7 +66,7 @@ class Logger:
         elif self.log_type == "F":
             try:
                 file_handler = FileHandler(self.file_name)
-            except Exception:
+            except FileNotFoundError or IsADirectoryError:
                 path = Path(self.file_name)
                 path.parent.mkdir(parents=True, exist_ok=True)
             finally:
@@ -68,9 +83,9 @@ class Logger:
 
     def write(self, level=None, message=""):
         """
-
-        :param level:
-        :param message:
+        Self logging method
+        :param level: int level of the log level
+        :param message: The log message to be stored
         :return:
         """
         if level is not None:
@@ -79,6 +94,10 @@ class Logger:
             return self.logger.log(self.level, message)
 
     def write_logs_to_s3(self):
+        """
+        Class method to write the logs to S3 using a StringIO object
+        :return: None
+        """
         if self.log_type == "S3" or self.log_type == "S":
             s3 = boto3.resource("s3", region_name=self.region)
             content = self.string_object.getvalue()
@@ -90,12 +109,11 @@ class Logger:
 
 def log(function_to_decorate=None, *, param_logger=None):
     """
-
-    :param function_to_decorate:
-    :param param_logger:
+    A decorator class to be used for logging functions
+    :param function_to_decorate: The function above which @log will be used to decorate
+    :param param_logger: A logger object may or may not be passed as one of the params for logging
     :return:
     """
-
     def decorator_log(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -133,9 +151,7 @@ def log(function_to_decorate=None, *, param_logger=None):
                 if logger.log_type in ["S", "S3"]:
                     logger.write_logs_to_s3()
                 raise e
-
         return wrapper
-
     if function_to_decorate is None:
         return decorator_log
     else:
