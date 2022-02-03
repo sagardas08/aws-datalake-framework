@@ -143,7 +143,7 @@ def get_metadata(table, region, logger=None):
         for k, v in item.items():
             temp_dict[k] = list(v.values())[0]
         response_list.append(temp_dict)
-        dct = {}
+        temp_dict = dict()
     return response_list
 
 
