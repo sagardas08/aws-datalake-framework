@@ -8,7 +8,7 @@ from .validateSchema import validate_schema
 
 
 class DataAsset:
-    def __init__(self, args, config):
+    def __init__(self, args, config, run_identifier):
         """
 
         :param args:
@@ -22,12 +22,14 @@ class DataAsset:
         self.fm_prefix = config["fm_prefix"]
         self.region = config["primary_region"]
         self.log_type = config["log_type"]
+        self.secret_name = config['secret_name']
         self.logger = Logger(
             log_type=self.log_type,
             log_name=self.exec_id,
             src_path=self.source_path,
             asset_id=self.asset_id,
             region=self.region,
+            run_identifier=run_identifier
         )
         self.dynamo_db = boto3.resource("dynamodb", region_name=self.region)
         items = self.get_data_asset_info()
@@ -56,6 +58,10 @@ class DataAsset:
 
     def get_error_path(self):
         pass
+
+    def get_masking_path(self):
+        return self.source_file_path.split(self.asset_id)[0] + \
+               f"{self.asset_id}/masked/"
 
     def get_asset_metadata(self):
         return get_metadata(self.metadata_table, self.region, logger=self.logger)
