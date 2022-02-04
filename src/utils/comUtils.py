@@ -17,9 +17,14 @@ def get_current_time():
 
 
 @log
-def update_data_catalog(table_name, exec_id,
-                        dq_validation=None, data_masking=None,
-                        data_standardization=None, logger=None):
+def update_data_catalog(
+    table_name,
+    exec_id,
+    dq_validation=None,
+    data_masking=None,
+    data_standardization=None,
+    logger=None,
+):
     """
 
     :param table_name:
@@ -30,15 +35,15 @@ def update_data_catalog(table_name, exec_id,
     :param logger:
     :return:
     """
-    table = boto3.resource('dynamodb').Table(table_name)
-    response = table.get_item(Key={'exec_id': exec_id})
-    item = response['Item']
+    table = boto3.resource("dynamodb").Table(table_name)
+    response = table.get_item(Key={"exec_id": exec_id})
+    item = response["Item"]
     if dq_validation:
-        item['dq_validation'] = dq_validation
+        item["dq_validation"] = dq_validation
     elif data_masking:
-        item['data_masking'] = data_masking
+        item["data_masking"] = data_masking
     elif data_standardization:
-        item['data_standardization'] = data_standardization
+        item["data_standardization"] = data_standardization
     table.put_item(Item=item)
 
 
@@ -50,8 +55,8 @@ def get_spark(logger=None):
     """
     spark = (
         SparkSession.builder.config("spark.jars.packages", pydeequ.deequ_maven_coord)
-            .config("spark.jars.excludes", pydeequ.f2j_maven_coord)
-            .getOrCreate()
+        .config("spark.jars.excludes", pydeequ.f2j_maven_coord)
+        .getOrCreate()
     )
     return spark
 
@@ -69,12 +74,12 @@ def stop_spark(spark):
 
 @log
 def create_spark_df(
-        spark,
-        source_file_path,
-        asset_file_type,
-        asset_file_delim,
-        asset_file_header,
-        logger=None,
+    spark,
+    source_file_path,
+    asset_file_type,
+    asset_file_delim,
+    asset_file_header,
+    logger=None,
 ):
     """
 
@@ -155,9 +160,7 @@ def check_failure(dataframe, logger):
     num_fails = df_fail.count()
     if num_fails >= 1:
         if logger:
-            logger.write(
-                message=f"Found {num_fails} Failures in the source file."
-            )
+            logger.write(message=f"Found {num_fails} Failures in the source file.")
         return True
     return False
 
@@ -172,27 +175,22 @@ def move_file(path, logger=None):
     """
     word_list = path.split("/")
     bucket = word_list[2]
-    s3 = boto3.resource('s3')
+    s3 = boto3.resource("s3")
     s3_bucket = s3.Bucket(bucket)
-    source = '/'.join(path.split('/')[3:])
-    target = path.split('/')[3] + '/Errors'
+    source = "/".join(path.split("/")[3:])
+    target = path.split("/")[3] + "/Errors"
     for obj in s3_bucket.objects.filter(Prefix=source):
-        source_filename = obj.key.split('/')[-1]
+        source_filename = obj.key.split("/")[-1]
         print(obj.key)
         print(source_filename)
-        copy_source = {
-            'Bucket': bucket,
-            'Key': obj.key
-        }
+        copy_source = {"Bucket": bucket, "Key": obj.key}
         target_filename = "{}/{}".format(target, source_filename)
         s3_bucket.copy(copy_source, target_filename)
         s3.Object(bucket, obj.key).delete()
 
 
 @log
-def move_source_file(
-        path, dq_result=None, schema_validation=None, logger=None
-):
+def move_source_file(path, dq_result=None, schema_validation=None, logger=None):
     """
     :param path:
     :param dq_result:

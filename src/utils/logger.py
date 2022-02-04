@@ -47,9 +47,13 @@ class Logger:
         self.log_type = log_type
         self.level = level
         self.region = region
-        self.log_name = log_name if log_name else 'root-logger'
+        self.log_name = log_name if log_name else "root-logger"
         self.log_bucket = src_path.split("/")[2] if src_path else None
-        self.file_name = f"{asset_id}/logs/{log_name}/{asset_id}_log.log" if asset_id and log_name else None
+        self.file_name = (
+            f"{asset_id}/logs/{log_name}/{asset_id}_log.log"
+            if asset_id and log_name
+            else None
+        )
         self.logger = self._get_logger()
 
     def _get_logger(self):
@@ -114,6 +118,7 @@ def log(function_to_decorate=None, *, param_logger=None):
     :param param_logger: A logger object may or may not be passed as one of the params for logging
     :return:
     """
+
     def decorator_log(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -121,7 +126,9 @@ def log(function_to_decorate=None, *, param_logger=None):
                 logger_params = [
                     x for x in kwargs.values() if isinstance(x, Logger)
                 ] + [x for x in args if isinstance(x, Logger)]
-                logger = next(iter(logger_params), Logger(log_name='root-logger', log_type='C'))
+                logger = next(
+                    iter(logger_params), Logger(log_name="root-logger", log_type="C")
+                )
             else:
                 logger = param_logger
             func_name = func.__name__
@@ -151,7 +158,9 @@ def log(function_to_decorate=None, *, param_logger=None):
                 if logger.log_type in ["S", "S3"]:
                     logger.write_logs_to_s3()
                 raise e
+
         return wrapper
+
     if function_to_decorate is None:
         return decorator_log
     else:
