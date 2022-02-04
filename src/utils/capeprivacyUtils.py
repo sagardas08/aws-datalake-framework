@@ -54,4 +54,3 @@ def run_data_masking(source_df, metadata, key, logger=None):
     return source_df
 
 
-
