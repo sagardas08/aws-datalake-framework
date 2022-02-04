@@ -26,6 +26,7 @@ class Logger:
         asset_id=None,
         src_path=None,
         region=None,
+        run_identifier=None
     ):
         """
         Logger class to instantiate a logging object
@@ -48,9 +49,10 @@ class Logger:
         self.level = level
         self.region = region
         self.log_name = log_name if log_name else "root-logger"
+        self.run_identifier = run_identifier
         self.log_bucket = src_path.split("/")[2] if src_path else None
         self.file_name = (
-            f"{asset_id}/logs/{log_name}/{asset_id}_log.log"
+            f"{asset_id}/logs/{log_name}/{self.run_identifier}_log.log"
             if asset_id and log_name
             else None
         )
