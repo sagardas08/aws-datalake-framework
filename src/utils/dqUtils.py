@@ -5,13 +5,7 @@ from pydeequ.checks import *
 from pydeequ.verification import *
 from pydeequ.repository import *
 from .dqConfig import Config
-
-
-def run_profiler(spark, df):
-    print("Running Profiler")
-    result = ColumnProfilerRunner(spark).onData(df).run()
-    for col, profile in result.profiles.items():
-        print(profile)
+from .logger import log
 
 
 def run_constraint_suggestion(spark, df):
@@ -23,20 +17,6 @@ def run_constraint_suggestion(spark, df):
     return json.dumps(suggestionResult, indent=2)
 
 
-def get_configs(config_file_path):
-    """
-    Utility method to get Configuration details from a JSON file path
-    Replaced by using a Class Based Approach
-    :param config_file_path: The path to configuration file
-    :return: Dict of configs
-    """
-    data = None
-    with open(config_file_path, "r") as f:
-        data = json.load(f)
-    f.close()
-    return data
-
-
 def deequ_equivalent(config, check):
     """
     Utility method for finding the corresponding Pydeequ function for a check in O(1) time
@@ -44,12 +24,11 @@ def deequ_equivalent(config, check):
     :param check: Kind of check to be performed which will act as the key of the dict
     :return: the corresponding Pydeequ function
     """
-    dq_check = None
     try:
         dq_check = config[check]
+        return dq_check
     except KeyError:
         return None
-    return dq_check
 
 
 def build_constraint(column, assertion, check):
@@ -92,10 +71,12 @@ def generate_assertion(constraint, value=None):
         return dq_dtype(value)
 
 
-def generate_code(responses):
+@log
+def generate_code(responses, logger=None):
     """
     utility method to generate Pydeequ code based on asset metadata
     :param responses: A list of dictionary objects
+    :param logger:
     :return: String object
     """
     check_list = list()
@@ -125,4 +106,3 @@ def generate_code(responses):
         parsed_checks
     )
     return parsed_code
-
