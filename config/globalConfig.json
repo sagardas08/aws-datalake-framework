@@ -3,6 +3,6 @@
   "fm_prefix": "dl-fmwrk",
   "primary_region": "us-east-1",
   "secondary_region": "us-east-2",
+  "log_type": "S",
   "secret_name": "cape_privacy_key"
 }
-
