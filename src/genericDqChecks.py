@@ -19,7 +19,7 @@ def get_global_config():
 args = getResolvedOptions(sys.argv, ["source_path", "source_id", "asset_id", "exec_id"])
 global_config = get_global_config()
 start_time = time.time()
-asset = DataAsset(args, global_config)
+asset = DataAsset(args, global_config, run_identifier='dq-validation')
 spark = get_spark(asset.logger)
 source_df = create_spark_df(
     spark,
