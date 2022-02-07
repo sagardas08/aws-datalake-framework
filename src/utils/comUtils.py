@@ -226,11 +226,9 @@ def store_sparkdf_to_s3(dataframe, target_path, asset_file_type, asset_file_deli
     :return:
     """
     target_path = target_path.replace("s3://", "s3a://")
-    timestamp = str(datetime.now())
-    splitlist = timestamp.split(".")
-    timestamp = splitlist[0]
-    timestamp = timestamp.replace(" ", "").replace(":", "").replace("-", "")
-    target_path = target_path + timestamp + "/"
+    time_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+    time_str = time_ist.strftime("%y%m%d%H%M%S")
+    target_path = target_path + time_str  + "/"
     if asset_file_type == 'csv':
         dataframe.coalesce(1).write.option("header", asset_file_header).option("delimiter", asset_file_delim).csv(
             target_path)
