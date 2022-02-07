@@ -60,7 +60,7 @@ aws glue create-job \
     \"--additional-python-modules\": \"Crypto,packaging,rfc3339,cape-privacy[spark]\", \
     \"--python-modules-installer-option\": \"--upgrade\" \
     }"\
-  --glue-version 2.0 \
+  --glue-version 3.0 \
   --number-of-workers 10 \
   --worker-type G.2X \
   --region $region
