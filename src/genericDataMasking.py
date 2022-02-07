@@ -21,18 +21,20 @@ global_config = get_global_config()
 start_time = time.time()
 asset = DataAsset(args, global_config, run_identifier='data-masking')
 spark = get_spark_for_masking(asset.logger)
-source_df = create_spark_df(
-    spark,
-    asset.source_file_path,
-    asset.asset_file_type,
-    asset.asset_file_delim,
-    asset.asset_file_header,
-    asset.logger
-)
 try:
+    source_df = create_spark_df(
+        spark,
+        asset.source_file_path,
+        asset.asset_file_type,
+        asset.asset_file_delim,
+        asset.asset_file_header,
+        asset.logger
+    )
     assert source_df is not None
-except AssertionError:
-    asset.logger.write("Unable to read the data from the source")
+except Exception or AssertionError:
+    asset.logger.write(message="Unable to read the data from the source")
+    asset.update_data_catalog(data_masking='Failed')
+    asset.logger.write_logs_to_s3()
     sys.exit()
 asset.update_data_catalog(data_masking='In-Progress')
 metadata = asset.get_asset_metadata()
@@ -47,8 +49,8 @@ try:
                         asset.asset_file_header,
                         asset.logger)
 except AssertionError:
-    asset.update_data_catalog(data_masking='Failure')
-    print("Encountered error while running data masking")
+    asset.update_data_catalog(data_masking='Failed')
+    asset.logger.write(message="Encountered error while running data masking")
     move_file(asset.source_path, asset.logger)
 
 asset.update_data_catalog(data_masking='Completed')

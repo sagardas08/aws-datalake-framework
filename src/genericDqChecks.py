@@ -42,6 +42,7 @@ if asset.validate_schema(source_df):
     asset.update_data_catalog(dq_validation="Completed")
     move_source_file(path=asset.source_path, dq_result=result, logger=asset.logger)
 else:
+    asset.update_data_catalog(dq_validation="Failed")
     asset.logger.write(message="Found schema irregularities")
     move_source_file(
         path=asset.source_path, schema_validation=False, logger=asset.logger

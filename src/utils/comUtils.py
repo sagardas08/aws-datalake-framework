@@ -14,7 +14,7 @@ from .logger import log
 
 def get_current_time():
     time_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
-    time_str = time_ist.strftime("%d-%m-%y %H:%M:%S")
+    time_str = time_ist.strftime("%d%m%y%H%M%S")
     return time_str
 
 
@@ -162,7 +162,7 @@ def check_failure(dataframe, logger):
     num_fails = df_fail.count()
     if num_fails >= 1:
         if logger:
-            logger.write(message=f"Found {num_fails} Failures in the source file.")
+            logger.write(message=f"Found {num_fails} Failure(s) in the source file.")
         return True
     return False
 
@@ -183,8 +183,6 @@ def move_file(path, logger=None):
     target = path.split("/")[3] + "/Errors"
     for obj in s3_bucket.objects.filter(Prefix=source):
         source_filename = obj.key.split("/")[-1]
-        print(obj.key)
-        print(source_filename)
         copy_source = {"Bucket": bucket, "Key": obj.key}
         target_filename = "{}/{}".format(target, source_filename)
         s3_bucket.copy(copy_source, target_filename)
@@ -229,15 +227,13 @@ def store_sparkdf_to_s3(dataframe, target_path, asset_file_type, asset_file_deli
     :param asset_file_header: The header true/false
     :return:
     """
-    target_path = target_path.replace("s3://", "s3a://")
     timestamp = str(datetime.now())
     splitlist = timestamp.split(".")
     timestamp = splitlist[0]
     timestamp = timestamp.replace(" ", "").replace(":", "").replace("-", "")
     target_path = target_path + timestamp + "/"
     if asset_file_type == 'csv':
-        dataframe.coalesce(1).write.option("header", asset_file_header).option("delimiter", asset_file_delim).csv(
-            target_path)
+        dataframe.repartition(1).write.csv(target_path, header=asset_file_header)
     if asset_file_type == 'parquet':
         dataframe.coalesce(1).write.parquet(target_path)
     if asset_file_type == 'json':
