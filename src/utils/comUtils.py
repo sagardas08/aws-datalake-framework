@@ -13,9 +13,8 @@ from .logger import log
 
 
 def get_current_time():
-    time_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
-    time_str = time_ist.strftime("%d%m%y%H%M%S")
-    return time_str
+    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    return timestamp
 
 
 @log
@@ -227,21 +226,17 @@ def store_sparkdf_to_s3(dataframe, target_path, asset_file_type, asset_file_deli
     :param asset_file_header: The header true/false
     :return:
     """
-    timestamp = str(datetime.now())
-    splitlist = timestamp.split(".")
-    timestamp = splitlist[0]
-    timestamp = timestamp.replace(" ", "").replace(":", "").replace("-", "")
+    target_path = target_path.replace("s3://", "s3a://")
+    timestamp = get_current_time()
     target_path = target_path + timestamp + "/"
     if asset_file_type == 'csv':
-        dataframe.repartition(1).write.csv(target_path, header=asset_file_header)
+        dataframe.repartition(1).write.csv(target_path, header=True, mode="overwrite")
     if asset_file_type == 'parquet':
-        dataframe.coalesce(1).write.parquet(target_path)
+        dataframe.repartition(1).write.parquet(target_path, header=True, mode="overwrite")
     if asset_file_type == 'json':
-        dataframe.coalesce(1).write.json(target_path)
+        dataframe.repartition(1).write.json(target_path, header=True, mode="overwrite")
     if asset_file_type == 'orc':
-        dataframe.coalesce(1).write.orc(target_path)
-    if logger:
-        logger.write(message="Moving the masked file to masked location")
+        dataframe.repartition(1).write.orc(target_path, header=True, mode="overwrite")
 
 
 @log

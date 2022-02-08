@@ -27,7 +27,7 @@ source_df = create_spark_df(
     asset.asset_file_type,
     asset.asset_file_delim,
     asset.asset_file_header,
-    asset.logger,
+    asset.logger
 )
 if asset.validate_schema(source_df):
     asset.update_data_catalog(dq_validation="In-Progress")
