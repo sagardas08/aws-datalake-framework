@@ -3,7 +3,8 @@ import boto3
 import datetime
 import os
 
-print('Loading function')
+print("Loading function")
+
 
 def lambda_handler(event, context):
   message = json.loads(event['Records'][0]['Sns']['Message'])
@@ -13,12 +14,15 @@ def lambda_handler(event, context):
   fm_prefix = os.environ['fm_prefix']
   aws_account = os.environ['aws_account']
 
-  key_path = key[:key.rfind('/')] + "/"
+  key_path = key[: key.rfind("/")] + "/"
   source_path = "s3://" + bucket + "/" + key_path
-  source_id = bucket.split('-')[2]
-  asset_id = key.split('/')[0]
-
-  print ("Source Path: {}, Source ID: {}, Asset ID: {}".format(source_path, source_id, asset_id))
+  source_id = bucket.split("-")[2]
+  asset_id = key.split("/")[0]
+  print(
+    "Source Path: {}, Source ID: {}, Asset ID: {}".format(
+      source_path, source_id, asset_id
+    )
+  )
 
   now = datetime.datetime.now()
   ts = now.strftime('%Y%m%d%H%M%S')

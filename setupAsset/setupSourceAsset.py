@@ -1,10 +1,10 @@
-'''
+"""
 == Create a new source system asset
 1. Build the directory structure for the asset in associated S3 bucket
 2. Setup creatObject event in the associated S3 bucket
 3. Insert entry in the dl-fmwrk.data_asset dynamoDb table for the asset
 4. Create a new dynamoDb table for the asset and create entries for all columms
-''' 
+"""
 
 import sys
 import os
@@ -17,6 +17,7 @@ from utils.comUtils import insert_asset_cols_dynamoDB
 from utils.comUtils import set_bucket_event_notification
 from utils.comUtils import create_src_s3_dir_str
 from utils.comUtils import create_asset_catalog_table
+
 
 def main():
   asset_json_file = sys.argv[1]
