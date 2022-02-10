@@ -34,6 +34,7 @@ aws glue create-job \
     }" \
   --default-arguments "{ \
     \"--extra-py-files\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/dependencies/pydeequ.zip,s3://dl-fmwrk-code-$region/aws-datalake-framework/dependencies/utils.zip\", \
+    \"--extra-files\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/config/globalConfig.json\", \
     \"--extra-jars\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/dependencies/deequ-1.0.3.jar\", \
     \"--TempDir\": \"s3://${fm_prefix}-code-$region/temporary/\", \
     \"--extra-files\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/config/globalConfig.json\" \
@@ -53,11 +54,13 @@ aws glue create-job \
     }" \
   --default-arguments "{ \
     \"--TempDir\": \"s3://${fm_prefix}-code-$region/temporary/\", \
+    \"--extra-py-files\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/dependencies/pydeequ.zip,s3://dl-fmwrk-code-$region/aws-datalake-framework/dependencies/utils.zip\", \
     \"--extra-files\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/config/globalConfig.json\", \
+    \"--extra-jars\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/dependencies/deequ-1.0.3.jar\", \
     \"--additional-python-modules\": \"Crypto,packaging,rfc3339,cape-privacy[spark]\", \
     \"--python-modules-installer-option\": \"--upgrade\" \
     }"\
-  --glue-version 2.0 \
+  --glue-version 3.0 \
   --number-of-workers 10 \
   --worker-type G.2X \
   --region $region

@@ -1,6 +1,8 @@
 # imports
 import boto3
 
+from .logger import log
+
 
 def get_schema_details(table):
     """
@@ -10,8 +12,8 @@ def get_schema_details(table):
     """
     dct = dict()
     response_list = list()
-    client = boto3.client('dynamodb', region_name='us-east-1')
-    response = client.scan(TableName=table)['Items']
+    client = boto3.client("dynamodb", region_name="us-east-1")
+    response = client.scan(TableName=table)["Items"]
     return response
 
 
@@ -23,8 +25,8 @@ def order_columns(items):
     """
     schema_dict = dict()
     for item in items:
-        col_id = item['col_id']['N']
-        col_name = item['col_nm']['S']
+        col_id = item["col_id"]["N"]
+        col_name = item["col_nm"]["S"]
         schema_dict[col_name] = int(col_id)
     columns = sorted(schema_dict, key=schema_dict.get)
     return columns
@@ -73,9 +75,13 @@ def match_length(actual, expected):
     return False
 
 
-def validate_schema(asset_file_type, asset_file_header, df, metadata_table):
+@log
+def validate_schema(
+    asset_file_type, asset_file_header, df, metadata_table, logger=None
+):
     """
     Target Function to enforce schema validation
+    :param logger:
     :param asset_file_type:
     :param asset_file_header:
     :param df:
@@ -93,10 +99,10 @@ def validate_schema(asset_file_type, asset_file_header, df, metadata_table):
         result = False
     else:
         # For json and parquet files: match the column names of the actual and expected cols
-        if asset_file_type == 'json' or asset_file_type == 'parquet':
+        if asset_file_type == "json" or asset_file_type == "parquet":
             result = match_without_order(actual_cols, expected_cols)
         # For CSV files with file header: Match the column name and column order
-        elif asset_file_type == 'csv' and asset_file_header:
+        elif asset_file_type == "csv" and asset_file_header:
             result, diff = match_in_order(actual_cols, expected_cols)
             if len(diff) > 0:
                 print("The following columns are not matching: ")
