@@ -16,6 +16,7 @@ from utils.comUtils import create_asset_detail_table
 from utils.comUtils import insert_asset_cols_dynamoDB
 from utils.comUtils import set_bucket_event_notification
 from utils.comUtils import create_src_s3_dir_str
+from utils.comUtils import create_asset_catalog_table
 
 def main():
   asset_json_file = sys.argv[1]
@@ -26,6 +27,10 @@ def main():
   print("Create asset detail table")
   create_asset_detail_table(asset_id, global_config["primary_region"])
   create_asset_detail_table(asset_id, global_config["secondary_region"])
+
+  print("Create asset catalog table")
+  create_asset_catalog_table(asset_id, global_config["primary_region"])
+  create_asset_catalog_table(asset_id, global_config["secondary_region"])
   time.sleep(10)
 
   print("Insert asset item")

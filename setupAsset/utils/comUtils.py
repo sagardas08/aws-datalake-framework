@@ -48,6 +48,32 @@ def insert_asset_cols_dynamoDB(asset_col_json_file, asset_id, region):
     response = asset_col_table.put_item(Item = jsonItem)
 
 
+def create_asset_catalog_table(asset_id, region):
+  dynamodb = boto3.resource('dynamodb', region_name = region)
+  global_config = getGlobalParams()
+
+  print('Creating the table {}.data_catalog.{} in {}'.format(global_config["fm_prefix"], str(asset_id), region))
+  asset_detail_table = dynamodb.create_table(
+    TableName=global_config["fm_prefix"] + ".data_catalog." + str(asset_id),
+    KeySchema=[
+      {
+        'AttributeName': 'exec_id',
+        'KeyType': 'HASH'
+      },
+    ],
+    AttributeDefinitions=[
+      {
+        'AttributeName': 'exec_id',
+        'AttributeType': 'S'
+      },
+    ],
+    ProvisionedThroughput={
+      'ReadCapacityUnits': 1,
+      'WriteCapacityUnits': 1,
+    }
+  )
+
+
 def create_asset_detail_table(asset_id, region):
   dynamodb = boto3.resource('dynamodb', region_name = region)
   global_config = getGlobalParams()
