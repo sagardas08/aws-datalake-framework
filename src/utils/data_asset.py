@@ -36,6 +36,7 @@ class DataAsset:
         self.asset_file_type = items["file_type"]
         self.asset_file_delim = items["file_delim"]
         self.asset_file_header = items["file_header"]
+        self.target_id = items["target_id"]
         self.source_file_path = self.source_path.replace("s3://", "s3a://")
         self.metadata_table = f"{self.fm_prefix}.data_asset.{self.asset_id}"
         self.data_catalog = f"{self.fm_prefix}.data_catalog.{self.asset_id}"
