@@ -3,19 +3,17 @@ import json
 import decimal
 from datetime import datetime, timedelta
 from io import StringIO
-
 import boto3
 import pydeequ
 from botocore.exceptions import ClientError
 from pyspark.sql import SparkSession
-
+from boto3.dynamodb.conditions import Key
 from .logger import log
 
 
 def get_current_time():
-    time_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
-    time_str = time_ist.strftime("%d-%m-%y %H:%M:%S")
-    return time_str
+    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    return timestamp
 
 
 @log
@@ -28,6 +26,7 @@ def update_data_catalog(
     logger=None,
 ):
     """
+
     :param table_name:
     :param exec_id:
     :param dq_validation:
@@ -83,6 +82,7 @@ def create_spark_df(
     logger=None,
 ):
     """
+
     :param spark:
     :param source_file_path:
     :param asset_file_type:
@@ -151,6 +151,7 @@ def get_metadata(table, region, logger=None):
 @log
 def check_failure(dataframe, logger):
     """
+
     :param dataframe:
     :param logger:
     :return:
@@ -159,7 +160,7 @@ def check_failure(dataframe, logger):
     num_fails = df_fail.count()
     if num_fails >= 1:
         if logger:
-            logger.write(message=f"Found {num_fails} Failures in the source file.")
+            logger.write(message=f"Found {num_fails} Failure(s) in the source file.")
         return True
     return False
 
@@ -167,6 +168,7 @@ def check_failure(dataframe, logger):
 @log
 def move_file(path, logger=None):
     """
+
     :param path:
     :param logger:
     :return:
@@ -179,8 +181,6 @@ def move_file(path, logger=None):
     target = path.split("/")[3] + "/Errors"
     for obj in s3_bucket.objects.filter(Prefix=source):
         source_filename = obj.key.split("/")[-1]
-        print(obj.key)
-        print(source_filename)
         copy_source = {"Bucket": bucket, "Key": obj.key}
         target_filename = "{}/{}".format(target, source_filename)
         s3_bucket.copy(copy_source, target_filename)
@@ -214,8 +214,16 @@ def move_source_file(path, dq_result=None, schema_validation=None, logger=None):
                 message="Moving the file to Error location due to schema irregularities"
             )
 
+
 @log
-def store_sparkdf_to_s3(dataframe, target_path, asset_file_type, asset_file_delim, asset_file_header, logger=None):
+def store_sparkdf_to_s3(
+    dataframe,
+    target_path,
+    asset_file_type,
+    asset_file_delim,
+    asset_file_header,
+    logger=None,
+):
     """
     utility method to store a Spark dataframe to S3 bucket
     :param dataframe: The spark dataframe
@@ -225,21 +233,16 @@ def store_sparkdf_to_s3(dataframe, target_path, asset_file_type, asset_file_deli
     :param asset_file_header: The header true/false
     :return:
     """
-    target_path = target_path.replace("s3://", "s3a://")
-    time_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
-    time_str = time_ist.strftime("%y%m%d%H%M%S")
-    target_path = target_path + time_str  + "/"
-    if asset_file_type == 'csv':
-        dataframe.coalesce(1).write.option("header", asset_file_header).option("delimiter", asset_file_delim).csv(
-            target_path)
-    if asset_file_type == 'parquet':
-        dataframe.coalesce(1).write.parquet(target_path)
-    if asset_file_type == 'json':
-        dataframe.coalesce(1).write.json(target_path)
-    if asset_file_type == 'orc':
-        dataframe.coalesce(1).write.orc(target_path)
-    if logger:
-        logger.write(message="Moving the masked file to masked location")
+    if asset_file_type == "csv":
+        dataframe.repartition(1).write.csv(
+            target_path, header=asset_file_header, mode="overwrite"
+        )
+    if asset_file_type == "parquet":
+        dataframe.repartition(1).write.parquet(target_path, mode="overwrite")
+    if asset_file_type == "json":
+        dataframe.repartition(1).write.json(target_path, mode="overwrite")
+    if asset_file_type == "orc":
+        dataframe.repartition(1).write.orc(target_path, mode="overwrite")
 
 
 @log
@@ -255,45 +258,68 @@ def get_secret(secretname, regionname, logger=None):
 
     # Create a Secrets Manager client
     session = boto3.session.Session()
-    client = session.client(
-        service_name='secretsmanager',
-        region_name=region_name
-    )
+    client = session.client(service_name="secretsmanager", region_name=region_name)
 
     try:
-        get_secret_value_response = client.get_secret_value(
-            SecretId = secret_name
-        )
+        get_secret_value_response = client.get_secret_value(SecretId=secret_name)
     except ClientError as e:
-        if e.response['Error']['Code'] == 'DecryptionFailureException':
+        if e.response["Error"]["Code"] == "DecryptionFailureException":
             # Secrets Manager can't decrypt the protected secret text using the provided KMS key.
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
-        elif e.response['Error']['Code'] == 'InternalServiceErrorException':
+        elif e.response["Error"]["Code"] == "InternalServiceErrorException":
             # An error occurred on the server side.
             # Deal with the exception here, and/or rethrow at your discretion
             raise e
-        elif e.response['Error']['Code'] == 'InvalidParameterException':
+        elif e.response["Error"]["Code"] == "InvalidParameterException":
             # You provided an invalid value for a parameter.
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
-        elif e.response['Error']['Code'] == 'InvalidRequestException':
+        elif e.response["Error"]["Code"] == "InvalidRequestException":
             # You provided a parameter value that is not valid for the current state of the resource.
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
-        elif e.response['Error']['Code'] == 'ResourceNotFoundException':
+        elif e.response["Error"]["Code"] == "ResourceNotFoundException":
             # We can't find the resource that you asked for.
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
     else:
         # Decrypts secret using the associated KMS key.
         # Depending on whether the secret is a string or binary, one of these fields will be populated.
-        if 'SecretString' in get_secret_value_response:
-            secret = get_secret_value_response['SecretString']
+        if "SecretString" in get_secret_value_response:
+            secret = get_secret_value_response["SecretString"]
             key_value_pair = json.loads(secret)
             key = key_value_pair["key"]
             if logger:
-                logger.write(message="Successfully retrieved the key from secret manager")
+                logger.write(
+                    message="Successfully retrieved the key from secret manager"
+                )
             return key
         else:
-            decoded_binary_secret = base64.b64decode(get_secret_value_response['SecretBinary'])
+            decoded_binary_secret = base64.b64decode(
+                get_secret_value_response["SecretBinary"]
+            )
+
+
+def get_timestamp(source_path):
+    return source_path.split("/")[5]
+
+
+@log
+def get_target_system_info(fm_prefix, target_id, region, logger=None):
+    dynamodb = boto3.resource("dynamodb", region_name=region)
+    table = f"{fm_prefix}.target_system"
+    logger.write(message=f"Getting asset info from {table}")
+    target_system_info = dynamodb.Table(table)
+    target_system_items = target_system_info.query(
+        KeyConditionExpression=Key("tgt_sys_id").eq(int(target_id))
+    )
+    target_items = dynamodbJsonToDict(target_system_items)
+    return target_items
+
+
+@log
+def get_standardization_path(target_system_info, asset_id, timestamp, logger=None):
+    target_bucket_name = target_system_info["bucket_name"]
+    target_subdomain = target_system_info["subdomain"]
+    return f"s3a://{target_bucket_name}/{target_subdomain}/{asset_id}/{timestamp}/"
