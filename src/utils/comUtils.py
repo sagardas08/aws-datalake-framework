@@ -16,7 +16,6 @@ def get_current_time():
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
     return timestamp
 
-
 @log
 def update_data_catalog(
     table_name,
@@ -46,7 +45,6 @@ def update_data_catalog(
     elif data_standardization:
         item["data_standardization"] = data_standardization
     table.put_item(Item=item)
-
 
 @log
 def get_spark(logger=None):

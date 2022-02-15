@@ -52,4 +52,3 @@ def run_data_masking(source_df, metadata, key, logger=None):
                 source_df = source_df.withColumn(col_name, round_numeric(functions.col(col_name)))
     logger.write(message="Data masking done successfully")
     return source_df
-
