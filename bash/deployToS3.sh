@@ -65,6 +65,26 @@ aws glue create-job \
   --worker-type G.2X \
   --region $region
 
+aws glue delete-job --job-name ${fm_prefix}-data-standardization --region $region
+aws glue create-job \
+  --name ${fm_prefix}-data-standardization \
+  --role 2482-misc-service-role \
+  --command "{ \
+    \"Name\": \"glueetl\", \
+    \"ScriptLocation\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/src/genericDataStandardization.py\" \
+    }" \
+  --default-arguments "{ \
+    \"--TempDir\": \"s3://${fm_prefix}-code-$region/temporary/\", \
+    \"--extra-py-files\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/dependencies/pydeequ.zip,s3://dl-fmwrk-code-$region/aws-datalake-framework/dependencies/utils.zip\", \
+    \"--extra-files\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/config/globalConfig.json\", \
+    \"--extra-jars\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/dependencies/deequ-1.0.3.jar\" \
+    }"\
+  --glue-version 2.0 \
+  --number-of-workers 10 \
+  --worker-type G.2X \
+  --region $region
+
+
 exit 0
 
 

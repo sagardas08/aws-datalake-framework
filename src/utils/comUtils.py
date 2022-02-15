@@ -16,7 +16,6 @@ def get_current_time():
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
     return timestamp
 
-
 @log
 def update_data_catalog(
     table_name,
@@ -46,7 +45,6 @@ def update_data_catalog(
     elif data_standardization:
         item["data_standardization"] = data_standardization
     table.put_item(Item=item)
-
 
 @log
 def get_spark(logger=None):
@@ -294,3 +292,26 @@ def get_secret(secretname, regionname, logger=None):
             return key
         else:
             decoded_binary_secret = base64.b64decode(get_secret_value_response['SecretBinary'])
+
+def get_timestamp(source_path):
+    return source_path.split("/")[5]
+
+
+@log
+def get_target_system_info(fm_prefix, target_id, region, logger=None):
+    dynamodb = boto3.resource("dynamodb", region_name=region)
+    table = f"{fm_prefix}.target_system"
+    logger.write(message=f"Getting asset info from {table}")
+    target_system_info = dynamodb.Table(table)
+    target_system_items = target_system_info.query(
+        KeyConditionExpression=Key("tgt_sys_id").eq(int(target_id))
+    )
+    target_items = dynamodbJsonToDict(target_system_items)
+    return target_items
+
+
+@log
+def get_standardization_path(target_system_info, asset_id, timestamp, logger=None):
+    target_bucket_name = target_system_info["bucket_name"]
+    target_subdomain = target_system_info["subdomain"]
+    return f"s3a://{target_bucket_name}/{target_subdomain}/{asset_id}/{timestamp}/"
