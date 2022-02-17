@@ -26,7 +26,7 @@ class Logger:
         asset_id=None,
         src_path=None,
         region=None,
-        run_identifier=None
+        run_identifier=None,
     ):
         """
         Logger class to instantiate a logging object

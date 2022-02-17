@@ -6,9 +6,6 @@ import sys
 import time
 
 
-spark = sql.SparkSession.builder.getOrCreate()
-
-
 def get_global_config():
     config_file_path = "globalConfig.json"
     file = open(file=config_file_path, mode="r")
@@ -17,6 +14,7 @@ def get_global_config():
     return config
 
 
+spark = get_spark()
 args = getResolvedOptions(sys.argv, ["source_path", "source_id", "asset_id", "exec_id"])
 global_config = get_global_config()
 start_time = time.time()
