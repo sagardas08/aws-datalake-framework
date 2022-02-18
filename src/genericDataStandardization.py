@@ -14,7 +14,7 @@ def get_global_config():
     return config
 
 
-spark = get_spark()
+spark = SparkSession.builder.appName('Data-Standardization').getOrCreate()
 args = getResolvedOptions(sys.argv, ["source_path", "source_id", "asset_id", "exec_id"])
 global_config = get_global_config()
 start_time = time.time()
