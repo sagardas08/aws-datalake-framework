@@ -1,10 +1,9 @@
-from awsglue.utils import getResolvedOptions
 import sys
+import time
+from awsglue.utils import getResolvedOptions
 from utils.data_asset import DataAsset
 from utils.comUtils import *
 from utils.capeprivacyUtils import *
-
-import time
 
 
 def get_global_config():
