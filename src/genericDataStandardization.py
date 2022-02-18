@@ -1,12 +1,9 @@
+import sys
+import time
 from awsglue.utils import getResolvedOptions
 from utils.data_asset import DataAsset
 from utils.comUtils import *
 from utils.standardizationUtils import *
-import sys
-import time
-
-
-spark = sql.SparkSession.builder.getOrCreate()
 
 
 def get_global_config():
@@ -20,6 +17,7 @@ def get_global_config():
 args = getResolvedOptions(sys.argv, ["source_path", "source_id", "asset_id", "exec_id"])
 global_config = get_global_config()
 start_time = time.time()
+spark = sql.SparkSession.builder.getOrCreate()
 asset = DataAsset(args, global_config, run_identifier="data-standardization")
 try:
     source_df = create_spark_df(
@@ -35,12 +33,9 @@ except Exception or AssertionError:
     asset.logger.write(message="Unable to read the data from the source")
     asset.update_data_catalog(data_standardization="Failed")
     asset.logger.write_logs_to_s3()
-
 asset.update_data_catalog(data_standardization="In-Progress")
 metadata = asset.get_asset_metadata()
-source_df.printSchema()
 result = run_data_standardization(source_df, metadata, asset.logger)
-result.printSchema()
 target_system_info = get_target_system_info(
     asset.fm_prefix, asset.target_id, asset.region, asset.logger
 )
@@ -54,7 +49,6 @@ try:
 except AssertionError:
     asset.update_data_catalog(data_standardization="Failed")
     asset.logger.write(message="Encountered error while running data standardization")
-
 asset.update_data_catalog(data_standardization="Completed")
 end_time = time.time()
 total_time_taken = float("{0:.2f}".format(end_time - start_time))
