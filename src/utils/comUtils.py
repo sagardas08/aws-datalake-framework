@@ -222,6 +222,7 @@ def store_sparkdf_to_s3(dataframe, target_path, asset_file_type, asset_file_deli
     :param asset_file_type: Type of the file that the dataframe should be written as
     :param asset_file_delim: The delimiter
     :param asset_file_header: The header true/false
+    :param logger:
     :return:
     """
     target_path = target_path.replace("s3://", "s3a://")
@@ -238,15 +239,16 @@ def store_sparkdf_to_s3(dataframe, target_path, asset_file_type, asset_file_deli
 
 
 @log
-def get_secret(secretname, regionname, logger=None):
+def get_secret(secret_nm, region_nm, logger=None):
     """
     Utility function to get secret key from secrets manager for tokenising in data masking
     :param secretname: The name of the secret key that is used for tokenisazation
     :param regionname: The AWS region for e.g. us-east-1
+    :param:logger
     :return:
     """
-    secret_name = secretname
-    region_name = regionname
+    secret_name = secret_nm
+    region_name = region_nm
 
     # Create a Secrets Manager client
     session = boto3.session.Session()
@@ -294,11 +296,24 @@ def get_secret(secretname, regionname, logger=None):
             decoded_binary_secret = base64.b64decode(get_secret_value_response['SecretBinary'])
 
 def get_timestamp(source_path):
+    """
+    Utility function to get timestamp from source path
+    :param source_path: The s3 uri
+    :return:
+    """
     return source_path.split("/")[5]
 
 
 @log
 def get_target_system_info(fm_prefix, target_id, region, logger=None):
+    """
+    Utility function to get information of the target system
+    :param fm_prefix: fm_prefix
+    :param target_id: The id of target
+    :param region: The AWS region for e.g. us-east-1
+    :param logger: logger 
+    :return:
+    """
     dynamodb = boto3.resource("dynamodb", region_name=region)
     table = f"{fm_prefix}.target_system"
     logger.write(message=f"Getting asset info from {table}")
@@ -312,6 +327,14 @@ def get_target_system_info(fm_prefix, target_id, region, logger=None):
 
 @log
 def get_standardization_path(target_system_info, asset_id, timestamp, logger=None):
+    """
+    Utility function to get the path where the standardized file should be stored
+    :param target_system_info: Dictionary containing target system info
+    :param asset_id: Asset id
+    :param timestamp: the timestamp
+    :param logger: logger
+    :return:
+    """
     target_bucket_name = target_system_info["bucket_name"]
     target_subdomain = target_system_info["subdomain"]
     return f"s3a://{target_bucket_name}/{target_subdomain}/{asset_id}/{timestamp}/"
