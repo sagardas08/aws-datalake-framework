@@ -20,24 +20,13 @@ def lambda_function_exists(lambda_client, func_name):
     return False
 
 
-def create_lambda(config, region=None):
-    """
-    Creates the lambda function based on the config values
-    :param config:
-    :param region:
-    :return:
-    """
+def delete_and_create(lambda_client, config, region):
     fm_prefix = config["fm_prefix"]
-    region = config["primary_region"] if region is None else region
     project_name = config["project_name"]
     func_name = config["lambda_function_name"]
     lambda_bucket = f"{fm_prefix}-code-{region}"
     lambda_key = f"{project_name}/lambda/lambda_function.zip"
-    lambda_client = boto3.client("lambda", region_name=region)
-    # TODO : Discuss if an end user wants to update the lambda function
-    if lambda_function_exists(lambda_client, func_name):
-        # update = str(input("A lambda function by the name {}Do you want to update the lambda function: Y/N  "))
-        lambda_client.delete_function(FunctionName=func_name)
+    lambda_client.delete_function(FunctionName=func_name)
     try:
         lambda_client.create_function(
             Code={
@@ -61,3 +50,25 @@ def create_lambda(config, region=None):
     except Exception as e:
         print(e)
         return False
+
+
+def create_lambda(config, region=None):
+    """
+    Creates the lambda function based on the config values
+    :param config:
+    :param region:
+    :return:
+    """
+    func_name = config["lambda_function_name"]
+    lambda_client = boto3.client("lambda", region_name=region)
+    # TODO : Discuss if an end user wants to update the lambda function
+    if lambda_function_exists(lambda_client, func_name):
+        update = str(input(f"A lambda function by the name {func_name} exists. "
+                           f"Do you want to update the lambda function [Y/N]:  "))
+        if update.lower() == 'y':
+            print("Lambda function is being updated ...")
+            status = delete_and_create(lambda_client, config, region)
+            return status
+        else:
+            print("Lambda function is not being updated ...")
+            return True

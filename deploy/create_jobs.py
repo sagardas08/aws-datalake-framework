@@ -17,8 +17,7 @@ def create_dq_job(config, region=None):
         f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/src/genericDqChecks.py"
     )
     default_args = {
-        "--extra-py-files": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/pydeequ.zip,"
-                            f"s3://dl-fmwrk-code-$region/aws-datalake-framework/dependencies/utils.zip",
+        "--extra-py-files": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/pydeequ.zip,s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/utils.zip",
         "--extra-files": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/config/globalConfig.json",
         "--extra-jars": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/deequ-1.0.3.jar",
         "--TempDir": f"s3://{fm_prefix}-code-{region}/temporary/",
@@ -55,8 +54,7 @@ def create_masking_job(config, region=None):
     client.delete_job(JobName=job_name)
     script_location = f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/src/genericDataMasking.py"
     default_args = {
-        "--extra-py-files": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/pydeequ.zip,"
-                            f"s3://dl-fmwrk-code-$region/aws-datalake-framework/dependencies/utils.zip",
+        "--extra-py-files": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/pydeequ.zip,s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/utils.zip",
         "--extra-files": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/config/globalConfig.json",
         "--extra-jars": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/deequ-1.0.3.jar",
         "--additional-python-modules": "Crypto,packaging,rfc3339,cape-privacy[spark]",
@@ -94,8 +92,7 @@ def create_standardization_job(config, region=None):
     client.delete_job(JobName=job_name)
     script_location = f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/src/genericDataStandardization.py"
     default_args = {
-        "--extra-py-files": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/pydeequ.zip,"
-                            f"s3://dl-fmwrk-code-$region/aws-datalake-framework/dependencies/utils.zip",
+        "--extra-py-files": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/pydeequ.zip,s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/utils.zip",
         "--extra-files": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/config/globalConfig.json",
         "--extra-jars": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/deequ-1.0.3.jar",
         "--TempDir": f"s3://{fm_prefix}-code-{region}/temporary/",

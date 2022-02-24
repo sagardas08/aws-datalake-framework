@@ -1,12 +1,15 @@
 import json
 import os
 import sys
+import time
 
 import boto3
 
 from deploy_s3 import fetch_latest_code, deploy_to_s3, remove_clone_dir
 from create_jobs import create_glue_jobs
 from deploy_lambda import create_lambda, lambda_function_exists
+from create_dynamodb_tables import create_dynamodb_tables
+from create_sfn import create_step_function
 from logger import Logger
 
 deploy_logger = Logger()
@@ -15,8 +18,8 @@ ROLLBACK_STATES = {
     2: "Deploying the latest code to S3",
     3: "Creating the lambda function",
     4: "Initiating Glue Job creation",
-    5: "Creating Step Function",
-    6: "Creating Source System, Target System Tables on DynamoDB",
+    5: "Creating Source System, Target System Tables on DynamoDB",
+    6: "Creating Step Function",
 }
 
 
@@ -29,68 +32,10 @@ class DeployPipeline:
         self.code_bucket_s3 = f"{self.fm_prefix}-code-{self.region}"
         self.clone_path = path
         self.state = 0
-        # TODO: Add further states - Create Step function, Create DynamoDB tables
         self.rollback = False
 
     def update_state(self):
         self.state += 1
-
-    def _rollback_code_fetch(self):
-        """
-        Helper method for the main rollback method
-        :return:
-        """
-        deploy_logger.write(message=f"Rolling back Cloning of github repo")
-        remove_clone_dir(self.clone_path)
-
-    def _rollback_s3_upload(self):
-        """
-        Helper method for the main rollback method
-        :return:
-        """
-        self._rollback_code_fetch()
-        rm_command = f"aws s3 rm s3://{self.code_bucket_s3} --recursive"
-        os.system(rm_command)
-        deploy_logger.write(
-            message=f"Rolling back the code upload to s3://{self.code_bucket_s3}"
-        )
-
-    def _rollback_lambda_creation(self):
-        """
-        Helper method for the main rollback method
-        :return:
-        """
-        self._rollback_s3_upload()
-        lambda_client = boto3.client("lambda", region_name=self.region)
-        func_name = self.config["lambda_function_name"]
-        if lambda_function_exists(lambda_client, func_name):
-            deploy_logger.write(
-                message=f"Rolling back the creation of lambda function: {func_name}"
-            )
-            lambda_client.delete_function(FunctionName=func_name)
-        else:
-            deploy_logger.write(
-                message=f"The lambda function: {func_name} does not exist"
-            )
-
-    def initiate_rollback(self):
-        """
-        Method to initiate rollback in case an error arises
-        The rollback is dependent on the level of the state and
-        uses a cascading call to helper methods
-        :return:
-        """
-        rollback_issue = ROLLBACK_STATES[self.state]
-        deploy_logger.write(
-            message=f"Initiating rollback due to issue in {rollback_issue}"
-        )
-        self.rollback = True
-        if self.state == 2:
-            self._rollback_code_fetch()
-        elif self.state == 3:
-            self._rollback_s3_upload()
-        elif self.state == 4:
-            self._rollback_lambda_creation()
 
     def clone_github(self):
         self.update_state()
@@ -130,7 +75,7 @@ class DeployPipeline:
             if not lambda_status:
                 self.initiate_rollback()
             else:
-                deploy_logger.write(message=f"Lambda function created")
+                deploy_logger.write(message=f"Deployed the Lambda function")
         else:
             pass
 
@@ -147,7 +92,118 @@ class DeployPipeline:
             if not create_status:
                 self.initiate_rollback()
             else:
-                deploy_logger.write(message="Glue job Created")
+                deploy_logger.write(message="Deployed rhe Glue jobs")
+        else:
+            pass
+
+    def create_dynamodb_tables(self):
+        if not self.rollback:
+            self.update_state()
+            create_status = create_dynamodb_tables(self.config, self.region)
+            if not create_status:
+                self.initiate_rollback()
+            else:
+                deploy_logger.write(message="Deployed the Dynamo DB Tables")
+        else:
+            pass
+
+    def create_step_function(self):
+        if not self.rollback:
+            self.update_state()
+            create_status = create_step_function(self.config, self.region)
+            if not create_status:
+                self.initiate_rollback()
+            else:
+                deploy_logger.write(message="Deployed the Step Function")
+        else:
+            pass
+
+    def _rollback_code_fetch(self):
+        """
+        Helper method for the main rollback method
+        :return:
+        """
+        deploy_logger.write(message=f"Rolling back Cloning of github repo")
+        remove_clone_dir(self.clone_path)
+
+    def _rollback_s3_upload(self):
+        """
+        Helper method for the main rollback method
+        :return:
+        """
+        self._rollback_code_fetch()
+        rm_command = f"aws s3 rm s3://{self.code_bucket_s3} --recursive"
+        os.system(rm_command)
+        deploy_logger.write(
+            message=f"Rolling back the code upload to s3://{self.code_bucket_s3}"
+        )
+
+    def _rollback_lambda_creation(self):
+        """
+        Helper method for the main rollback method
+        :return:
+        """
+        self._rollback_s3_upload()
+        lambda_client = boto3.client("lambda", region_name=self.region)
+        func_name = self.config["lambda_function_name"]
+        if lambda_function_exists(lambda_client, func_name):
+            deploy_logger.write(
+                message=f"Rolling back the creation of lambda function: {func_name}"
+            )
+            lambda_client.delete_function(FunctionName=func_name)
+        else:
+            deploy_logger.write(
+                message=f"The lambda function: {func_name} does not exist"
+            )
+
+    def _rollback_glue_job_creation(self):
+        jobs = (
+            f"{self.fm_prefix}-data-quality-checks",
+            f"{self.fm_prefix}-data-masking",
+            f"{self.fm_prefix}-data-standardization",
+        )
+        client = boto3.client("glue", region_name=self.region)
+        for job in jobs:
+            client.delete_job(JobName=job)
+            status = f"Currently deleting {job}"
+            deploy_logger.write(message=status)
+            time.sleep(secs=5)
+
+    def _rollback_source_table_creation(self):
+        client = boto3.client("dynamodb", region_name=self.region)
+        tables = (
+            f"{self.fm_prefix}.source_system",
+            f"{self.fm_prefix}.target_system",
+            f"{self.fm_prefix}.data_asset",
+        )
+        for table in tables:
+            response = client.delete_table(TableName=table)
+            status = f"{response['TableDescription']['TableStatus']} {table}"
+            deploy_logger.write(message=status)
+            time.sleep(10)
+
+    def initiate_rollback(self):
+        """
+        Method to initiate rollback in case an error arises
+        The rollback is dependent on the level of the state and
+        uses a cascading call to helper methods
+        :return:
+        """
+        rollback_issue = ROLLBACK_STATES[self.state]
+        deploy_logger.write(
+            message=f"Initiating rollback due to issue in {rollback_issue}"
+        )
+        self.rollback = True
+        if self.state == 2:
+            self._rollback_code_fetch()
+        elif self.state == 3:
+            self._rollback_s3_upload()
+        elif self.state == 4:
+            self._rollback_lambda_creation()
+        elif self.state == 5:
+            self._rollback_glue_job_creation()
+        elif self.state == 6:
+            self._rollback_source_table_creation()
         else:
             pass
 
@@ -161,7 +217,10 @@ def deploy(config, clone_path, region, multi_region=False, iteration=0):
     deploy_ob.deploy_to_s3()
     deploy_ob.create_lambda_function()
     deploy_ob.create_glue_jobs()
+    deploy_ob.create_dynamodb_tables()
+    deploy_ob.create_step_function()
     # While deploying in multiple region do not clean the clone dir
+    # since it will be used again and again for multiple regions
     if not multi_region:
         remove_clone_dir(clone_path)
 
@@ -203,11 +262,13 @@ def main():
         region = arguments[1].lower()
         deploy_logger.write(message=f"Deploying in region = {region}")
         if region == "all":
+            # Deploying in all the regions specified in the config file
             deploy_logger.write(
                 message=f"Deploying in all the regions specified in config"
             )
             deploy_region_wise(config, clone_path, deploy_region="all")
         else:
+            # Deploying in the region specified
             deploy_logger.write(message=f"Deploying in region = {region}")
             deploy_region_wise(config, clone_path, deploy_region=region)
     else:
