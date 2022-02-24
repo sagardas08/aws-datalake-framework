@@ -8,5 +8,4 @@
   "project_name": "aws-datalake-framework",
   "git_branch": "develop",
   "lambda_function_name": "dl-2181-test"
-
 }
