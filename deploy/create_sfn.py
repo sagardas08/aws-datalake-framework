@@ -52,7 +52,7 @@ def create_step_function(config, region=None):
         "States": {
             "Data Quality Checks": {
                 "Type": "Task",
-                "Resource": "arn:aws:states:::glue:startJobRun",
+                "Resource": "arn:aws:states:::glue:startJobRun.sync",
                 "Parameters": {
                     "JobName": f"{prefix}-data-quality-checks",
                     "Arguments": {
@@ -67,7 +67,7 @@ def create_step_function(config, region=None):
             },
             "Data Masking": {
                 "Type": "Task",
-                "Resource": "arn:aws:states:::glue:startJobRun",
+                "Resource": "arn:aws:states:::glue:startJobRun.sync",
                 "Parameters": {
                     "JobName": f"{prefix}-data-masking",
                     "Arguments": {
@@ -82,7 +82,7 @@ def create_step_function(config, region=None):
             },
             "Data Standardization": {
                 "Type": "Task",
-                "Resource": "arn:aws:states:::glue:startJobRun",
+                "Resource": "arn:aws:states:::glue:startJobRun.sync",
                 "Parameters": {
                     "JobName": f"{prefix}-data-standardization",
                     "Arguments": {
