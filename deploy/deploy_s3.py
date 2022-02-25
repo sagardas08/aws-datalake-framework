@@ -44,8 +44,13 @@ def remove_clone_dir(path):
         shutil.rmtree(path)
 
 
-def zip_utils(zip_path, utils_path):
-    shutil.make_archive(utils_path, "zip", zip_path)
+def zip_utils(source_path, target_zip_path, base_dir=None):
+    if base_dir:
+        shutil.make_archive(base_name=target_zip_path, format="zip",
+                            root_dir=source_path, base_dir='utils')
+    else:
+        shutil.make_archive(base_name=target_zip_path, format="zip",
+                            root_dir=source_path)
 
 
 def deploy_to_s3(root_dir, config, region=None):
@@ -61,17 +66,15 @@ def deploy_to_s3(root_dir, config, region=None):
     project_name = config["project_name"]
     bucket_name = f"{fm_prefix}-code-{region}"
     source_path = root_dir + f"/{project_name}"
-    utils_zip_src_path = root_dir + f"/{project_name}/src/utils"
+    utils_zip_src_path = root_dir + f"/{project_name}/src"
     utils_zip_target_path = root_dir + f"/{project_name}/dependencies/utils"
     lambda_zip_src_path = root_dir + f"/{project_name}/src/lambda"
     lambda_zip_target_path = root_dir + f"/{project_name}/lambda/lambda_function"
     try:
-        zip_utils(utils_zip_src_path, utils_zip_target_path)
+        zip_utils(utils_zip_src_path, utils_zip_target_path, base_dir='utils')
         zip_utils(lambda_zip_src_path, lambda_zip_target_path)
         cleanup_cmd = f"aws s3 rm s3://{bucket_name} --recursive"
-        copy_cmd = (
-            f"aws s3 cp {source_path} s3://{bucket_name}/{project_name} --recursive"
-        )
+        copy_cmd = f"aws s3 cp {source_path} s3://{bucket_name}/{project_name} --recursive"
         os.system(cleanup_cmd)
         os.system(copy_cmd)
         return True
