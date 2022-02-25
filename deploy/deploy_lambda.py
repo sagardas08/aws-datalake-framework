@@ -21,6 +21,7 @@ def lambda_function_exists(lambda_client, func_name):
 
 
 def delete_and_create(lambda_client, config, region):
+    # TODO: Add lambda permission to include SNS topic after discussion
     fm_prefix = config["fm_prefix"]
     project_name = config["project_name"]
     func_name = config["lambda_function_name"]
@@ -36,7 +37,7 @@ def delete_and_create(lambda_client, config, region):
             PackageType="Zip",
             Description="Testing Lambda deployment",
             FunctionName=func_name,
-            Handler="lambda_function.lambda_handler",
+            Handler=f"{func_name}.lambda_handler",
             Role="arn:aws:iam::076931226898:role/service-role/dlFmwrkSrcDataInfo_role",
             Runtime="python3.9",
             Environment={
