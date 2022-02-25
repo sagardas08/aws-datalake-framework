@@ -10,17 +10,17 @@ def create_dq_job(config, region=None):
     """
     region = config["primary_region"] if region is None else region
     fm_prefix = config["fm_prefix"]
+    project = config['project_name']
     client = boto3.client("glue", region_name=region)
     job_name = f"{fm_prefix}-data-quality-checks"
     client.delete_job(JobName=job_name)
-    script_location = (
-        f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/src/genericDqChecks.py"
-    )
+    code_bucket = f"s3://{fm_prefix}-code-{region}"
+    script_location = f"{code_bucket}/{project}/src/genericDqChecks.py"
     default_args = {
-        "--extra-py-files": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/pydeequ.zip,s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/utils.zip",
-        "--extra-files": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/config/globalConfig.json",
-        "--extra-jars": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/deequ-1.0.3.jar",
-        "--TempDir": f"s3://{fm_prefix}-code-{region}/temporary/",
+        "--extra-py-files": f"{code_bucket}/{project}/dependencies/pydeequ.zip,{code_bucket}/{project}/dependencies/utils.zip",
+        "--extra-files": f"{code_bucket}/{project}/config/globalConfig.json",
+        "--extra-jars": f"{code_bucket}/{project}/dependencies/deequ-1.0.3.jar",
+        "--TempDir": f"{code_bucket}/temporary/",
     }
     response = client.create_job(
         Name=job_name,
@@ -49,16 +49,18 @@ def create_masking_job(config, region=None):
     """
     region = config["primary_region"] if region is None else region
     fm_prefix = config["fm_prefix"]
+    project = config['project_name']
     client = boto3.client("glue", region_name=region)
     job_name = f"{fm_prefix}-data-masking"
     client.delete_job(JobName=job_name)
-    script_location = f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/src/genericDataMasking.py"
+    code_bucket = f"s3://{fm_prefix}-code-{region}"
+    script_location = f"{code_bucket}/{project}/src/genericDataMasking.py"
     default_args = {
-        "--extra-py-files": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/pydeequ.zip,s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/utils.zip",
-        "--extra-files": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/config/globalConfig.json",
-        "--extra-jars": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/deequ-1.0.3.jar",
-        "--additional-python-modules": "Crypto,packaging,rfc3339,cape-privacy[spark]",
-        "--TempDir": f"s3://{fm_prefix}-code-{region}/temporary/",
+        "--extra-py-files": f"{code_bucket}/{project}/dependencies/pydeequ.zip,{code_bucket}/{project}/dependencies/utils.zip",
+        "--extra-files": f"{code_bucket}/{project}/config/globalConfig.json",
+        "--extra-jars": f"{code_bucket}/{project}/dependencies/deequ-1.0.3.jar",
+        "--TempDir": f"{code_bucket}/temporary/",
+        "--additional-python-modules": "Crypto,packaging,rfc3339,cape-privacy[spark]"
     }
     response = client.create_job(
         Name=job_name,
@@ -87,15 +89,17 @@ def create_standardization_job(config, region=None):
     """
     region = config["primary_region"] if region is None else region
     fm_prefix = config["fm_prefix"]
+    project = config['project_name']
     client = boto3.client("glue", region_name=region)
     job_name = f"{fm_prefix}-data-standardization"
     client.delete_job(JobName=job_name)
-    script_location = f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/src/genericDataStandardization.py"
+    code_bucket = f"s3://{fm_prefix}-code-{region}"
+    script_location = f"{code_bucket}/{project}/src/genericDataStandardization.py"
     default_args = {
-        "--extra-py-files": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/pydeequ.zip,s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/utils.zip",
-        "--extra-files": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/config/globalConfig.json",
-        "--extra-jars": f"s3://{fm_prefix}-code-{region}/aws-datalake-framework/dependencies/deequ-1.0.3.jar",
-        "--TempDir": f"s3://{fm_prefix}-code-{region}/temporary/",
+        "--extra-py-files": f"{code_bucket}/{project}/dependencies/pydeequ.zip,{code_bucket}/{project}/dependencies/utils.zip",
+        "--extra-files": f"{code_bucket}/{project}/config/globalConfig.json",
+        "--extra-jars": f"{code_bucket}/{project}/dependencies/deequ-1.0.3.jar",
+        "--TempDir": f"{code_bucket}/temporary/"
     }
     response = client.create_job(
         Name=job_name,
