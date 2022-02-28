@@ -28,28 +28,22 @@ try:
         asset.asset_file_header,
         asset.logger,
     )
-    assert source_df is not None
-except Exception or AssertionError:
-    asset.logger.write(message="Unable to read the data from the source")
+    asset.update_data_catalog(data_standardization="In-Progress")
+    metadata = asset.get_asset_metadata()
+    result = run_data_standardization(source_df, metadata, asset.logger)
+    target_system_info = get_target_system_info(
+        asset.fm_prefix, asset.target_id, asset.region, asset.logger
+    )
+    timestamp = get_timestamp(asset.source_path)
+    target_path = get_standardization_path(
+        target_system_info, asset.asset_id, timestamp, asset.logger
+    )
+    result.repartition(1).write.parquet(target_path, mode="overwrite")
+    asset.update_data_catalog(data_standardization="Completed")
+except Exception as e:
+    asset.logger.write(message=str(e))
     asset.update_data_catalog(data_standardization="Failed")
     asset.logger.write_logs_to_s3()
-asset.update_data_catalog(data_standardization="In-Progress")
-metadata = asset.get_asset_metadata()
-result = run_data_standardization(source_df, metadata, asset.logger)
-target_system_info = get_target_system_info(
-    asset.fm_prefix, asset.target_id, asset.region, asset.logger
-)
-timestamp = get_timestamp(asset.source_path)
-target_path = get_standardization_path(
-    target_system_info, asset.asset_id, timestamp, asset.logger
-)
-try:
-    assert result is not None
-    result.repartition(1).write.parquet(target_path, mode="overwrite")
-except AssertionError:
-    asset.update_data_catalog(data_standardization="Failed")
-    asset.logger.write(message="Encountered error while running data standardization")
-asset.update_data_catalog(data_standardization="Completed")
 end_time = time.time()
 total_time_taken = float("{0:.2f}".format(end_time - start_time))
 asset.logger.write(message=f"Time Taken = {total_time_taken} seconds")
