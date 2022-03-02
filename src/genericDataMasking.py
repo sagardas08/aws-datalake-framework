@@ -61,4 +61,3 @@ end_time = time.time()
 asset.logger.write(message=f"Time Taken = {round(end_time - start_time, 2)} seconds")
 asset.logger.write_logs_to_s3()
 stop_spark(spark)
-

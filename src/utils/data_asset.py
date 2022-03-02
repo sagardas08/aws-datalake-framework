@@ -22,7 +22,7 @@ class DataAsset:
         self.fm_prefix = config["fm_prefix"]
         self.region = config["primary_region"]
         self.log_type = config["log_type"]
-        self.secret_name = config['secret_name']
+        self.secret_name = config["secret_name"]
         self.source_file_path = self.source_path.replace("s3://", "s3a://")
         self.logger = Logger(
             log_type=self.log_type,
@@ -30,7 +30,7 @@ class DataAsset:
             src_path=self.source_path,
             asset_id=self.asset_id,
             region=self.region,
-            run_identifier=run_identifier
+            run_identifier=run_identifier,
         )
         self.dynamo_db = boto3.resource("dynamodb", region_name=self.region)
         items = self.get_data_asset_info()
@@ -61,8 +61,9 @@ class DataAsset:
         pass
 
     def get_masking_path(self):
-        return self.source_file_path.split(self.asset_id)[0] + \
-               f"{self.asset_id}/masked/"
+        return (
+            self.source_file_path.split(self.asset_id)[0] + f"{self.asset_id}/masked/"
+        )
 
     def get_asset_metadata(self):
         return get_metadata(self.metadata_table, self.region, logger=self.logger)
