@@ -20,7 +20,7 @@ class DataAsset:
         self.source_id = args["source_id"]
         self.exec_id = args["exec_id"]
         self.fm_prefix = config["fm_prefix"]
-        self.region = config["primary_region"]
+        self.region = boto3.session.Session().region_name
         self.log_type = config["log_type"]
         self.secret_name = config["secret_name"]
         self.source_file_path = self.source_path.replace("s3://", "s3a://")
