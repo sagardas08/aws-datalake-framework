@@ -16,6 +16,7 @@ def get_current_time():
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
     return timestamp
 
+
 @log
 def update_data_catalog(
     table_name,
@@ -45,6 +46,7 @@ def update_data_catalog(
     elif data_standardization:
         item["data_standardization"] = data_standardization
     table.put_item(Item=item)
+
 
 @log
 def get_spark(logger=None):
@@ -213,8 +215,16 @@ def move_source_file(path, dq_result=None, schema_validation=None, logger=None):
                 message="Moving the file to Error location due to schema irregularities"
             )
 
+
 @log
-def store_sparkdf_to_s3(dataframe, target_path, asset_file_type, asset_file_delim, asset_file_header, logger=None):
+def store_sparkdf_to_s3(
+    dataframe,
+    target_path,
+    asset_file_type,
+    asset_file_delim,
+    asset_file_header,
+    logger=None,
+):
     """
     utility method to store a Spark dataframe to S3 bucket
     :param dataframe: The spark dataframe
@@ -228,13 +238,15 @@ def store_sparkdf_to_s3(dataframe, target_path, asset_file_type, asset_file_deli
     target_path = target_path.replace("s3://", "s3a://")
     timestamp = get_current_time()
     target_path = target_path + timestamp + "/"
-    if asset_file_type == 'csv':
+    if asset_file_type == "csv":
         dataframe.repartition(1).write.csv(target_path, header=True, mode="overwrite")
-    if asset_file_type == 'parquet':
-        dataframe.repartition(1).write.parquet(target_path, header=True, mode="overwrite")
-    if asset_file_type == 'json':
+    if asset_file_type == "parquet":
+        dataframe.repartition(1).write.parquet(
+            target_path, header=True, mode="overwrite"
+        )
+    if asset_file_type == "json":
         dataframe.repartition(1).write.json(target_path, header=True, mode="overwrite")
-    if asset_file_type == 'orc':
+    if asset_file_type == "orc":
         dataframe.repartition(1).write.orc(target_path, header=True, mode="overwrite")
 
 
@@ -252,48 +264,48 @@ def get_secret(secret_nm, region_nm, logger=None):
 
     # Create a Secrets Manager client
     session = boto3.session.Session()
-    client = session.client(
-        service_name='secretsmanager',
-        region_name=region_name
-    )
+    client = session.client(service_name="secretsmanager", region_name=region_name)
 
     try:
-        get_secret_value_response = client.get_secret_value(
-            SecretId = secret_name
-        )
+        get_secret_value_response = client.get_secret_value(SecretId=secret_name)
     except ClientError as e:
-        if e.response['Error']['Code'] == 'DecryptionFailureException':
+        if e.response["Error"]["Code"] == "DecryptionFailureException":
             # Secrets Manager can't decrypt the protected secret text using the provided KMS key.
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
-        elif e.response['Error']['Code'] == 'InternalServiceErrorException':
+        elif e.response["Error"]["Code"] == "InternalServiceErrorException":
             # An error occurred on the server side.
             # Deal with the exception here, and/or rethrow at your discretion
             raise e
-        elif e.response['Error']['Code'] == 'InvalidParameterException':
+        elif e.response["Error"]["Code"] == "InvalidParameterException":
             # You provided an invalid value for a parameter.
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
-        elif e.response['Error']['Code'] == 'InvalidRequestException':
+        elif e.response["Error"]["Code"] == "InvalidRequestException":
             # You provided a parameter value that is not valid for the current state of the resource.
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
-        elif e.response['Error']['Code'] == 'ResourceNotFoundException':
+        elif e.response["Error"]["Code"] == "ResourceNotFoundException":
             # We can't find the resource that you asked for.
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
     else:
         # Decrypts secret using the associated KMS key.
         # Depending on whether the secret is a string or binary, one of these fields will be populated.
-        if 'SecretString' in get_secret_value_response:
-            secret = get_secret_value_response['SecretString']
+        if "SecretString" in get_secret_value_response:
+            secret = get_secret_value_response["SecretString"]
             key_value_pair = json.loads(secret)
             key = key_value_pair["key"]
             if logger:
-                logger.write(message="Successfully retrieved the key from secret manager")
+                logger.write(
+                    message="Successfully retrieved the key from secret manager"
+                )
             return key
         else:
-            decoded_binary_secret = base64.b64decode(get_secret_value_response['SecretBinary'])
+            decoded_binary_secret = base64.b64decode(
+                get_secret_value_response["SecretBinary"]
+            )
+
 
 def get_timestamp(source_path):
     """

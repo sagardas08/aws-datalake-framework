@@ -5,7 +5,6 @@ from utils.data_asset import DataAsset
 from utils.comUtils import *
 from utils.standardizationUtils import *
 
-
 def get_global_config():
     config_file_path = "globalConfig.json"
     file = open(file=config_file_path, mode="r")
@@ -14,6 +13,7 @@ def get_global_config():
     return config
 
 
+spark = SparkSession.builder.appName('Data-Standardization').getOrCreate()
 args = getResolvedOptions(sys.argv, ["source_path", "source_id", "asset_id", "exec_id"])
 global_config = get_global_config()
 start_time = time.time()
