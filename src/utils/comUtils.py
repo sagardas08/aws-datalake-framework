@@ -123,6 +123,7 @@ class DecimalEncoder(json.JSONEncoder):
 
 
 def dynamodbJsonToDict(dynamodbJson):
+    items = None
     for i in dynamodbJson["Items"]:
         items = json.dumps(i, cls=DecimalEncoder)
     return json.loads(items)

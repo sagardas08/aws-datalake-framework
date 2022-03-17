@@ -68,9 +68,16 @@ class DataAsset:
     def get_asset_metadata(self):
         return get_metadata(self.metadata_table, self.region, logger=self.logger)
 
-    def generate_dq_code(self):
+    def generate_dq_code(self, adv_dq=False):
         metadata = self.get_asset_metadata()
-        code = generate_code(metadata, logger=self.logger)
+        if adv_dq:
+            adv_dq_table = f'{self.fm_prefix}.adv_dq.{self.asset_id}'
+            table = self.dynamo_db.Table(adv_dq_table)
+            response = table.scan()
+            check_list = ['.' + i['dq_rule'] for i in response['Items']]
+            code = generate_code(metadata, logger=self.logger, adv_dq_info=check_list)
+        else:
+            code = generate_code(metadata, logger=self.logger)
         self.logger.write(message=f"Pydeequ Code Generated: {code}")
         return code
 
@@ -115,6 +122,7 @@ class DataAsset:
             self.asset_file_header,
             source_df,
             self.metadata_table,
+            self.region,
             logger=self.logger,
         )
         self.logger.write(message=f"Schema Validation = {schema_validation}")
