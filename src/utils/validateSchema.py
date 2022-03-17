@@ -4,15 +4,16 @@ import boto3
 from .logger import log
 
 
-def get_schema_details(table):
+def get_schema_details(table, region):
     """
 
+    :param region:
     :param table:
     :return:
     """
     dct = dict()
     response_list = list()
-    client = boto3.client("dynamodb", region_name="us-east-1")
+    client = boto3.client("dynamodb", region_name=region)
     response = client.scan(TableName=table)["Items"]
     return response
 
@@ -77,10 +78,11 @@ def match_length(actual, expected):
 
 @log
 def validate_schema(
-    asset_file_type, asset_file_header, df, metadata_table, logger=None
+    asset_file_type, asset_file_header, df, metadata_table, region, logger=None
 ):
     """
     Target Function to enforce schema validation
+    :param region:
     :param logger:
     :param asset_file_type:
     :param asset_file_header:
@@ -89,7 +91,7 @@ def validate_schema(
     :return:
     """
     df_cols = df.columns
-    schema_details = get_schema_details(metadata_table)
+    schema_details = get_schema_details(metadata_table, region)
     columns = order_columns(schema_details)
     actual_cols = [i.lower() for i in df_cols]
     expected_cols = [i.lower() for i in columns]
