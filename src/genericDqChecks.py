@@ -32,7 +32,7 @@ source_df = create_spark_df(
 if asset.validate_schema(source_df):
     try:
         asset.update_data_catalog(dq_validation="In-Progress")
-        dq_code = asset.generate_dq_code()
+        dq_code = asset.generate_dq_code(adv_dq=True)
         check = Check(spark, CheckLevel.Warning, "Deequ Data Quality Checks")
         checkOutput = None
         asset.logger.write(message="Executing the DQ code")
