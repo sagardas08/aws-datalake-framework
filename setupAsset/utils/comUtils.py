@@ -60,29 +60,29 @@ def insert_asset_cols_dynamoDB(asset_col_json_file, asset_id, region):
 
 
 def create_asset_catalog_table(asset_id, region):
-  dynamodb = boto3.resource('dynamodb', region_name = region)
-  global_config = getGlobalParams()
+    dynamodb = boto3.resource('dynamodb', region_name=region)
+    global_config = getGlobalParams()
 
-  print('Creating the table {}.data_catalog.{} in {}'.format(global_config["fm_prefix"], str(asset_id), region))
-  asset_detail_table = dynamodb.create_table(
-    TableName=global_config["fm_prefix"] + ".data_catalog." + str(asset_id),
-    KeySchema=[
-      {
-        'AttributeName': 'exec_id',
-        'KeyType': 'HASH'
-      },
-    ],
-    AttributeDefinitions=[
-      {
-        'AttributeName': 'exec_id',
-        'AttributeType': 'S'
-      },
-    ],
-    ProvisionedThroughput={
-      'ReadCapacityUnits': 1,
-      'WriteCapacityUnits': 1,
-    }
-  )
+    print('Creating the table {}.data_catalog.{} in {}'.format(global_config["fm_prefix"], str(asset_id), region))
+    asset_detail_table = dynamodb.create_table(
+        TableName=global_config["fm_prefix"] + ".data_catalog." + str(asset_id),
+        KeySchema=[
+            {
+                'AttributeName': 'exec_id',
+                'KeyType': 'HASH'
+            },
+        ],
+        AttributeDefinitions=[
+            {
+                'AttributeName': 'exec_id',
+                'AttributeType': 'S'
+            },
+        ],
+        ProvisionedThroughput={
+            'ReadCapacityUnits': 1,
+            'WriteCapacityUnits': 1,
+        }
+    )
 
 
 def create_asset_detail_table(asset_id, region):
@@ -162,31 +162,44 @@ def set_bucket_event_notification(asset_id, asset_json_file, region):
 
     s3_event_name = str(asset_id) + "-createObject"
     sns_name = (
-        global_config["fm_prefix"] + "-" + str(src_sys_id) + "-init-file-creation"
+            global_config["fm_prefix"] + "-" + str(src_sys_id) + "-init-file-creation"
     )
     sns_arn = (
-        "arn:aws:sns:" + region + ":" + global_config["aws_account"] + ":" + sns_name
+            "arn:aws:sns:" + region + ":" + global_config["aws_account"] + ":" + sns_name
     )
     s3Client = boto3.client("s3")
-
     print("Creating putObject event notification to {} bucket".format(bucket_name))
-    s3Client.put_bucket_notification_configuration(
-        Bucket=bucket_name,
-        NotificationConfiguration={
-            "TopicConfigurations": [
-                {
-                    "Id": s3_event_name,
-                    "TopicArn": sns_arn,
-                    "Events": ["s3:ObjectCreated:*"],
-                    "Filter": {
-                        "Key": {
-                            "FilterRules": [
-                                {"Name": "prefix", "Value": key_prefix},
-                                {"Name": "suffix", "Value": key_suffix},
-                            ]
-                        }
-                    },
-                }
-            ]
+    new_config = {
+        "Id": s3_event_name,
+        "TopicArn": sns_arn,
+        "Events": ["s3:ObjectCreated:*"],
+        "Filter": {
+            "Key": {
+                "FilterRules": [
+                    {"Name": "prefix", "Value": key_prefix},
+                    {"Name": "suffix", "Value": key_suffix},
+                ]
+            }
         },
-    )
+    }
+    response = s3Client.get_bucket_notification_configuration(Bucket=bucket_name)
+    if 'TopicConfigurations' not in response.keys():
+        # If the bucket doesn't have event notification configured
+        # Attach a new Topic Config
+        s3Client.put_bucket_notification_configuration(
+            Bucket=bucket_name,
+            NotificationConfiguration={
+                "TopicConfigurations": [new_config]
+            },
+        )
+    else:
+        # The bucket has event notif configured.
+        # Get the initial configs and append the new config
+        bucket_config = response['TopicConfigurations']
+        bucket_config.append(new_config)
+        s3Client.put_bucket_notification_configuration(
+            Bucket=bucket_name,
+            NotificationConfiguration={
+                "TopicConfigurations": bucket_config
+            },
+        )
