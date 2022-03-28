@@ -74,14 +74,13 @@ def exists_query(client, table, exec_id):
     result_set = query_result['ResultSet']
     rows = result_set['Rows']
     row_elements = len(rows)
+    exists = False
     if not rows:
-        return False
-    elif row_elements == 1:
-        if rows['Data'][0]['VarCharValue'] == table:
-            return True
-    elif row_elements > 1:
+        return exists
+    elif row_elements >= 1:
         if table in [x['Data'][0]['VarCharValue'] for x in rows]:
-            return True
+            exists = True
+    return exists
 
 
 def check_table_exists(client, db, table):
