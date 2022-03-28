@@ -21,7 +21,6 @@ def lambda_function_exists(lambda_client, func_name):
 
 
 def update_lambda_code(lambda_client, config, region):
-    # TODO: Add lambda permission to include SNS topic after discussion
     fm_prefix = config["fm_prefix"]
     project_name = config["project_name"]
     func_name = config["lambda_function_name"]
