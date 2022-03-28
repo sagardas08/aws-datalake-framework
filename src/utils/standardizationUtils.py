@@ -13,7 +13,6 @@ def run_data_standardization(source_df, metadata, logger=None):
     :param logger:
     :return:
     """
-
     for i in metadata:
         col_name = i.get("col_nm")
         target_col_name = i.get("tgt_col_nm")
