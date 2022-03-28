@@ -19,12 +19,12 @@ def get_current_time():
 
 @log
 def update_data_catalog(
-    table_name,
-    exec_id,
-    dq_validation=None,
-    data_masking=None,
-    data_standardization=None,
-    logger=None,
+        table_name,
+        exec_id,
+        dq_validation=None,
+        data_masking=None,
+        data_standardization=None,
+        logger=None,
 ):
     """
 
@@ -56,8 +56,8 @@ def get_spark(logger=None):
     """
     spark = (
         SparkSession.builder.config("spark.jars.packages", pydeequ.deequ_maven_coord)
-        .config("spark.jars.excludes", pydeequ.f2j_maven_coord)
-        .getOrCreate()
+            .config("spark.jars.excludes", pydeequ.f2j_maven_coord)
+            .getOrCreate()
     )
     return spark
 
@@ -75,12 +75,12 @@ def stop_spark(spark):
 
 @log
 def create_spark_df(
-    spark,
-    source_file_path,
-    asset_file_type,
-    asset_file_delim,
-    asset_file_header,
-    logger=None,
+        spark,
+        source_file_path,
+        asset_file_type,
+        asset_file_delim,
+        asset_file_header,
+        logger=None,
 ):
     """
 
@@ -219,12 +219,12 @@ def move_source_file(path, dq_result=None, schema_validation=None, logger=None):
 
 @log
 def store_sparkdf_to_s3(
-    dataframe,
-    target_path,
-    asset_file_type,
-    asset_file_delim,
-    asset_file_header,
-    logger=None,
+        dataframe,
+        target_path,
+        asset_file_type,
+        asset_file_delim,
+        asset_file_header,
+        logger=None,
 ):
     """
     utility method to store a Spark dataframe to S3 bucket
@@ -255,8 +255,8 @@ def store_sparkdf_to_s3(
 def get_secret(secret_nm, region_nm, logger=None):
     """
     Utility function to get secret key from secrets manager for tokenising in data masking
-    :param secretname: The name of the secret key that is used for tokenisazation
-    :param regionname: The AWS region for e.g. us-east-1
+    :param secret_nm: The name of the secret key that is used for tokenisazation
+    :param region_nm: The AWS region for e.g. us-east-1
     :param:logger
     :return:
     """
@@ -351,3 +351,15 @@ def get_standardization_path(target_system_info, asset_id, timestamp, logger=Non
     target_bucket_name = target_system_info["bucket_name"]
     target_subdomain = target_system_info["subdomain"]
     return f"s3a://{target_bucket_name}/{target_subdomain}/{asset_id}/{timestamp}/"
+
+
+def get_athena_path(target_system_info, asset_id):
+    """
+    Utility function to get the path for the specified athena table
+    :param target_system_info: Dictionary containing target system info
+    :param asset_id: Asset id
+    :return:
+    """
+    target_bucket_name = target_system_info["bucket_name"]
+    target_subdomain = target_system_info["subdomain"]
+    return f"s3a://{target_bucket_name}/{target_subdomain}/{asset_id}/"
