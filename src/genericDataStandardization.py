@@ -43,7 +43,7 @@ try:
     result.repartition(1).write.parquet(target_path, mode="overwrite")
 
     # Storing the target file to Athena with DB = Domain and Table = SUb-domain_AssetId
-    domain = target_system_info['Domain']
+    domain = target_system_info['domain']
     get_or_create_db(asset.region, domain)
     athena_path = get_athena_path(target_system_info, asset.asset_id)
     asset.update_data_catalog(data_standardization="Completed")
