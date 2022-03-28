@@ -1,3 +1,5 @@
+# usage: python setupAsset/deleteSourceAsset.py asset_id region
+
 import json
 import sys
 
@@ -56,7 +58,7 @@ def remove_asset_s3(asset):
             logger.write(message=f"Deleting {file_key}")
             s3_client.delete_object(Bucket=bucket, Key=file_key)
         s3_client.delete_object(Bucket=bucket, Key=f"{asset.asset_id}")
-    except KeyError as e:
+    except KeyError:
         # If a particular asset files are not present then
         logger.write(level=50, message="No files found to delete.")
 
@@ -86,7 +88,7 @@ def remove_asset_col_details(asset):
     try:
         asset.dynamodb_client.delete_table(TableName=asset_detail_table)
         logger.write(message=f"Deleted Table {asset_detail_table} from DynamoDB")
-    except ClientError as e:
+    except ClientError:
         logger.write(message=f"The table: {asset_detail_table} d.n.e.")
 
 
@@ -100,7 +102,7 @@ def remove_asset_catalog_details(asset):
     try:
         asset.dynamodb_client.delete_table(TableName=asset_catalog_table)
         logger.write(message=f"Deleted Table {asset_catalog_table} from DynamoDB")
-    except ClientError as e:
+    except ClientError:
         logger.write(message=f"The table: {asset_catalog_table} d.n.e.")
 
 
@@ -123,7 +125,7 @@ def remove_asset_item(asset):
             logger.write(
                 message=f"Unable to delete {asset.asset_id} from {asset_detail_table}"
             )
-    except ClientError as e:
+    except ClientError:
         logger.write(message=f"The table: {asset_detail_table} d.n.e.")
 
 
