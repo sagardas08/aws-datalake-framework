@@ -40,6 +40,7 @@ class DataAsset:
         self.asset_file_delim = items["file_delim"]
         self.asset_file_header = items["file_header"]
         self.target_id = items["target_id"]
+        self.encryption = items["req_encryption"]
         self.metadata_table = f"{self.fm_prefix}.data_asset.{self.asset_id}"
         self.data_catalog = f"{self.fm_prefix}.data_catalog.{self.asset_id}"
 
