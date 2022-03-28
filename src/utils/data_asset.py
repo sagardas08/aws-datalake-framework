@@ -1,5 +1,6 @@
 import boto3
 from boto3.dynamodb.conditions import Key
+from botocore.exceptions import ClientError
 
 from .comUtils import get_metadata, dynamodbJsonToDict
 from .dqUtils import generate_code
@@ -34,6 +35,7 @@ class DataAsset:
         )
         self.dynamo_db = boto3.resource("dynamodb", region_name=self.region)
         items = self.get_data_asset_info()
+        self.asset_name = items["asset_nm"]
         self.asset_file_type = items["file_type"]
         self.asset_file_delim = items["file_delim"]
         self.asset_file_header = items["file_header"]
@@ -68,14 +70,31 @@ class DataAsset:
     def get_asset_metadata(self):
         return get_metadata(self.metadata_table, self.region, logger=self.logger)
 
-    def generate_dq_code(self, adv_dq=False):
+    def adv_dq_required(self):
+        adv_dq_table = f"{self.fm_prefix}.adv_dq.{self.asset_id}"
+        table = self.dynamo_db.Table(adv_dq_table)
+        required = None
+        try:
+            if table.table_status in ["CREATING", "UPDATING", "ACTIVE"]:
+                required = True
+        except ClientError:
+            required = False
+        return required
+
+    def generate_dq_code(self):
         metadata = self.get_asset_metadata()
+        adv_dq = self.adv_dq_required()
         if adv_dq:
             adv_dq_table = f'{self.fm_prefix}.adv_dq.{self.asset_id}'
             table = self.dynamo_db.Table(adv_dq_table)
             response = table.scan()
-            check_list = ['.' + i['dq_rule'] for i in response['Items']]
-            code = generate_code(metadata, logger=self.logger, adv_dq_info=check_list)
+            if len(response['Items']):
+                # The table exists and contains the adv dq
+                check_list = ['.' + i['dq_rule'] for i in response['Items']]
+                code = generate_code(metadata, logger=self.logger, adv_dq_info=check_list)
+            else:
+                # The table exists but is empty
+                code = generate_code(metadata, logger=self.logger)
         else:
             code = generate_code(metadata, logger=self.logger)
         self.logger.write(message=f"Pydeequ Code Generated: {code}")
