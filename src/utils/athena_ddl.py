@@ -3,7 +3,7 @@ import time
 
 import boto3
 from boto3.exceptions import ResourceNotExistsError
-from logger import log
+from .logger import log
 
 # Workgroup Hardcoded
 
