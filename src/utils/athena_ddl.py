@@ -2,28 +2,44 @@
 import time
 
 import boto3
+from boto3.exceptions import ResourceNotExistsError
+from logger import log
+
+# Workgroup Hardcoded
 
 
-def get_or_create_db(region, db_name):
+@log
+def get_or_create_db(region, db_name, logger=None):
     """
 
+    :param logger:
     :param region:
     :param db_name:
     :return:
     """
-    ath = boto3.client("athena", region_name=region)
-    response = ath.list_databases(CatalogName='AwsDataCatalog')
-    time.sleep(2)
-    databases = [i['Name'] for i in response['DatabaseList']]
-    if db_name in databases:
-        print(f"Database: {db_name} already exists")
-    else:
-        print(f"Database: {db_name} doesn't exist. Creating a new database")
+    client = boto3.client('athena', region_name=region)
+    try:
+        response = client.get_database(
+            CatalogName='AwsDataCatalog',
+            DatabaseName='university'
+        )
+        if 'Database' in response.keys():
+            if response['Database']['Name'] == db_name:
+                logger.write(message=f"The database: {db_name} exists")
+            else:
+                print(f"Attempting to create the db: {db_name}")
+                query = f"create database {db_name}"
+                client.start_query_execution(
+                    QueryString=query, WorkGroup='dl-fmwrk'
+                )
+        else:
+            logger.write(message=f"Ivalid response: {response}")
+    except Exception as e:
+        logger.write(message=e)
+        logger.write(message=f"Attempting to create the db: {db_name}")
         query = f"create database {db_name}"
-        # (Workgroup Hardcoded)
-        ath.start_query_execution(
-            QueryString=query,
-            WorkGroup='dl-fmwrk',
+        client.start_query_execution(
+            QueryString=query, WorkGroup='dl-fmwrk'
         )
 
 
@@ -102,10 +118,12 @@ def check_table_exists(client, db, table):
     return table_exists
 
 
+@log
 def get_or_create_table(region, df, target_info, asset_id,
-                        path, partition=False, encrypt=False):
+                        path, partition=False, encrypt=False, logger=None):
     """
 
+    :param logger:
     :param region:
     :param df:
     :param target_info:
@@ -121,18 +139,19 @@ def get_or_create_table(region, df, target_info, asset_id,
     # check if the table exists on Athena
     table_exists = check_table_exists(ath, db, table)
     if not table_exists:
-        print(f"The table: {db}.{table} does not exist.")
+        logger.write(message=f"The table: {db}.{table} does not exist.")
         ddl = generate_ddl(df, db, table, path, partition, encrypt)
-        # (Workgroup Hardcoded)
         ath.start_query_execution(QueryString=ddl, WorkGroup='dl-fmwrk')
     elif table_exists:
-        print(f"The table: {db}.{table} exists.")
+        logger.write(message=f"The table: {db}.{table} exists.")
 
 
-def manage_partition(region, target_info, asset_id, partition_instance, location):
+@log
+def manage_partition(region, target_info, asset_id, partition_instance, location, logger=None):
     """
 
-    :param region: 
+    :param logger:
+    :param region:
     :param target_info:
     :param asset_id:
     :param partition_instance:
@@ -149,5 +168,6 @@ def manage_partition(region, target_info, asset_id, partition_instance, location
     PARTITION (partition_instance='{partition_instance}')
     LOCATION '{partition_location}';
     """
+    logger.write(message=f"Managing the partitions using {alter_table}")
     # Execute the partition statement on Athena (Workgroup Hardcoded)
     ath.start_query_execution(QueryString=alter_table, WorkGroup='dl-fmwrk')
