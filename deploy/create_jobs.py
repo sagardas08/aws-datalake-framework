@@ -112,7 +112,7 @@ def create_standardization_job(config, region=None):
         },
         DefaultArguments=default_args,
         Timeout=15,
-        GlueVersion="2.0",
+        GlueVersion="3.0",
         NumberOfWorkers=10,
         WorkerType="G.2X",
     )
