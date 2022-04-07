@@ -148,6 +148,15 @@ def create_src_s3_dir_str(asset_id, asset_json_file, region):
 
 
 def set_bucket_event_notification(asset_id, asset_json_file, region):
+    """
+    Utility method to set the bucket event notification by getting prior event settings
+
+    :param asset_id:
+    :param asset_json_file: A json formatted document that contains details about the asset
+    :param region:
+
+    :return:
+    """
     global_config = getGlobalParams()
     with open(asset_json_file) as json_file:
         asset_config = json.load(json_file)
@@ -155,11 +164,10 @@ def set_bucket_event_notification(asset_id, asset_json_file, region):
     src_sys_id = asset_config["src_sys_id"]
     bucket_name = global_config["fm_prefix"] + "-" + str(src_sys_id) + "-" + region
     key_prefix = str(asset_id) + "/init/"
-    if asset_config["multipartition"] == False:
+    if not asset_config["multipartition"]:
         key_suffix = asset_config["file_type"]
     else:
         key_suffix = asset_config["trigger_file_pattern"]
-
     s3_event_name = str(asset_id) + "-createObject"
     sns_name = (
             global_config["fm_prefix"] + "-" + str(src_sys_id) + "-init-file-creation"
