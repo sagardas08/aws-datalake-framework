@@ -15,6 +15,13 @@ def get_global_config():
     return config
 
 
+def stop():
+    stop_spark(spark)
+    end_time = time.time()
+    asset.logger.write(message=f"Time Taken = {round(end_time - start_time, 2)} seconds")
+    asset.logger.write_logs_to_s3()
+
+
 # Get the arguments
 args = getResolvedOptions(sys.argv, ["source_path", "source_id", "asset_id", "exec_id"])
 global_config = get_global_config()
@@ -46,14 +53,14 @@ if asset.validate_schema(source_df):
         asset.logger.write(message=str(e))
         asset.update_data_catalog(dq_validation="Failed")
         asset.logger.write_logs_to_s3()
+    # Code ends here: Write the logs to an Output location.
+    stop()
 else:
     asset.update_data_catalog(dq_validation="Failed")
     asset.logger.write(message="Found schema irregularities")
     move_source_file(
         path=asset.source_path, schema_validation=False, logger=asset.logger
     )
-# Code ends here: Write the logs to an Output location.
-stop_spark(spark)
-end_time = time.time()
-asset.logger.write(message=f"Time Taken = {round(end_time - start_time, 2)} seconds")
-asset.logger.write_logs_to_s3()
+    # Code ends here: Write the logs to an Output location.
+    stop()
+    raise Exception("Halting the execution due to schema irregularities in the dataset")

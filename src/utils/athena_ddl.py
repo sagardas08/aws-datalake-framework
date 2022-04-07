@@ -3,6 +3,8 @@ import time
 
 import boto3
 from boto3.exceptions import ResourceNotExistsError
+from botocore.exceptions import ClientError
+
 from .logger import log
 
 # Workgroup Hardcoded
@@ -11,11 +13,12 @@ from .logger import log
 @log
 def get_or_create_db(region, db_name, logger=None):
     """
+    Utility method to create a Database if one doesn't exist
 
-    :param logger:
-    :param region:
-    :param db_name:
-    :return:
+    :param logger: Logging object to record details
+    :param region: AWS region
+    :param db_name: The name by which a DB is supposed to be created
+    :return: None
     """
     client = boto3.client('athena', region_name=region)
     try:
@@ -33,7 +36,7 @@ def get_or_create_db(region, db_name, logger=None):
                     QueryString=query, WorkGroup='dl-fmwrk'
                 )
         else:
-            logger.write(message=f"Ivalid response: {response}")
+            logger.write(message=f"Invalid response: {response}")
     except Exception as e:
         logger.write(message=e)
         logger.write(message=f"Attempting to create the db: {db_name}")
@@ -45,14 +48,15 @@ def get_or_create_db(region, db_name, logger=None):
 
 def generate_ddl(df, db, table, path, partition, encrypt):
     """
+    Dynamic generation of Athena DDL on the go based on the dataframe object.
 
-    :param df:
-    :param db:
-    :param table:
-    :param path:
-    :param partition:
-    :param encrypt:
-    :return:
+    :param df: The dataframe based on which the Athena DDL is to be constructed
+    :param db: The DB in which the query needs to be executed
+    :param table: The table that will be created post execution
+    :param path: The path to underlying S3 files in the target system
+    :param partition: Flag to set partition True / False
+    :param encrypt: Flag to enable / disable encryption of underlying dataset.
+    :return: string
     """
 
     fields = df.dtypes
@@ -101,36 +105,39 @@ def exists_query(client, table, exec_id):
 
 def check_table_exists(client, db, table):
     """
-
-    :param client:
-    :param db:
-    :param table:
-    :return:
+    Utility method to check if a table exists or not in the database.
+    :param client: The boto3 Client
+    :param db: The database under which the query is supposed to run
+    :param table: The table to be searched for
+    :return: bool
     """
-    # (Workgroup Hardcoded)
-    response = client.start_query_execution(
-        QueryString=f"SHOW TABLES IN {db} '*{table}*'", WorkGroup='dl-fmwrk'
-    )
-    # Athena Waiter is not implemented in boto3, hence adding a delay
-    time.sleep(5)
-    exec_id = response['QueryExecutionId']
-    table_exists = exists_query(client, table, exec_id)
-    return table_exists
+    exists = None
+    try:
+        response = client.get_table_metadata(
+            CatalogName='AwsDataCatalog',
+            DatabaseName=db,
+            TableName=table
+        )
+        exists = True
+    except ClientError as e:
+        exists = False
+    assert exists is not None
+    return exists
 
 
 @log
 def get_or_create_table(region, df, target_info, asset_id,
                         path, partition=False, encrypt=False, logger=None):
     """
-
-    :param logger:
-    :param region:
-    :param df:
-    :param target_info:
-    :param path:
-    :param asset_id:
-    :param partition:
-    :param encrypt:
+    Create a table in Athena under the specified DB.
+    :param logger: The logger object to record details of the function
+    :param region: The AWS region
+    :param df: The Spark Dataframe object
+    :param target_info: A dict of target system information
+    :param path: The path to the AWS target system.
+    :param asset_id: The asset id
+    :param partition: Boolen flag to enable or disable partition
+    :param encrypt: Boolean flag to enable or disable encryption
     :return:
     """
     ath = boto3.client('athena', region_name=region)
@@ -141,6 +148,7 @@ def get_or_create_table(region, df, target_info, asset_id,
     if not table_exists:
         logger.write(message=f"The table: {db}.{table} does not exist.")
         ddl = generate_ddl(df, db, table, path, partition, encrypt)
+        # TODO: remove hardcoded WorkGroup values
         ath.start_query_execution(QueryString=ddl, WorkGroup='dl-fmwrk')
     elif table_exists:
         logger.write(message=f"The table: {db}.{table} exists.")
@@ -149,6 +157,7 @@ def get_or_create_table(region, df, target_info, asset_id,
 @log
 def manage_partition(region, target_info, asset_id, partition_instance, location, logger=None):
     """
+    Add partitions to the created Athena Table.
 
     :param logger:
     :param region:
