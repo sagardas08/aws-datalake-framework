@@ -44,15 +44,16 @@ try:
 
     # Storing the target file to Athena with DB = Domain and Table = SUb-domain_AssetId
     domain = target_system_info['domain']
-    get_or_create_db(asset.region, domain)
+    get_or_create_db(asset.region, domain, asset.logger)
     athena_path = get_athena_path(target_system_info, asset.asset_id)
     asset.update_data_catalog(data_standardization="Completed")
     get_or_create_table(
         asset.region, result, target_system_info, asset.asset_name,
-        athena_path, partition=True, encrypt=asset.encryption
+        athena_path, partition=True, encrypt=asset.encryption, logger=asset.logger
     )
     manage_partition(
-        asset.region, target_system_info, asset.asset_name, timestamp, target_path
+        asset.region, target_system_info, asset.asset_name,
+        timestamp, target_path, asset.logger
     )
 
 except Exception as e:
