@@ -19,15 +19,14 @@ def get_current_time():
 
 @log
 def update_data_catalog(
-        table_name,
-        exec_id,
-        dq_validation=None,
-        data_masking=None,
-        data_standardization=None,
-        logger=None,
+    table_name,
+    exec_id,
+    dq_validation=None,
+    data_masking=None,
+    data_standardization=None,
+    logger=None,
 ):
     """
-
     :param table_name:
     :param exec_id:
     :param dq_validation:
@@ -56,8 +55,8 @@ def get_spark(logger=None):
     """
     spark = (
         SparkSession.builder.config("spark.jars.packages", pydeequ.deequ_maven_coord)
-            .config("spark.jars.excludes", pydeequ.f2j_maven_coord)
-            .getOrCreate()
+        .config("spark.jars.excludes", pydeequ.f2j_maven_coord)
+        .getOrCreate()
     )
     return spark
 
@@ -75,15 +74,14 @@ def stop_spark(spark):
 
 @log
 def create_spark_df(
-        spark,
-        source_file_path,
-        asset_file_type,
-        asset_file_delim,
-        asset_file_header,
-        logger=None,
+    spark,
+    source_file_path,
+    asset_file_type,
+    asset_file_delim,
+    asset_file_header,
+    logger=None,
 ):
     """
-
     :param spark:
     :param source_file_path:
     :param asset_file_type:
@@ -124,15 +122,14 @@ class DecimalEncoder(json.JSONEncoder):
 
 def convert_to_dict(response):
     """
-    Called function used in get_target_system_info function
     :param response:
     :return:
     """
-    converted_list = dict()
+    converted_dict = dict()
     for key, value in response["Item"].items():
         x = list(value.values())
-        converted_list[key] = x[0]
-    return converted_list
+        converted_dict[key] = x[0]
+    return converted_dict
 
 
 @log
@@ -159,7 +156,6 @@ def get_metadata(table, region, logger=None):
 @log
 def check_failure(dataframe, logger):
     """
-
     :param dataframe:
     :param logger:
     :return:
@@ -176,7 +172,6 @@ def check_failure(dataframe, logger):
 @log
 def move_file(path, logger=None):
     """
-
     :param path:
     :param logger:
     :return:
@@ -225,12 +220,12 @@ def move_source_file(path, dq_result=None, schema_validation=None, logger=None):
 
 @log
 def store_sparkdf_to_s3(
-        dataframe,
-        target_path,
-        asset_file_type,
-        asset_file_delim,
-        asset_file_header,
-        logger=None,
+    dataframe,
+    target_path,
+    asset_file_type,
+    asset_file_delim,
+    asset_file_header,
+    logger=None,
 ):
     """
     utility method to store a Spark dataframe to S3 bucket
