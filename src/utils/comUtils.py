@@ -3,7 +3,7 @@ import json
 import decimal
 from datetime import datetime, timedelta
 from io import StringIO
-
+from boto3.dynamodb.conditions import Key
 import boto3
 import pydeequ
 from botocore.exceptions import ClientError
@@ -19,12 +19,12 @@ def get_current_time():
 
 @log
 def update_data_catalog(
-    table_name,
-    exec_id,
-    dq_validation=None,
-    data_masking=None,
-    data_standardization=None,
-    logger=None,
+        table_name,
+        exec_id,
+        dq_validation=None,
+        data_masking=None,
+        data_standardization=None,
+        logger=None,
 ):
     """
 
@@ -56,8 +56,8 @@ def get_spark(logger=None):
     """
     spark = (
         SparkSession.builder.config("spark.jars.packages", pydeequ.deequ_maven_coord)
-        .config("spark.jars.excludes", pydeequ.f2j_maven_coord)
-        .getOrCreate()
+            .config("spark.jars.excludes", pydeequ.f2j_maven_coord)
+            .getOrCreate()
     )
     return spark
 
@@ -75,12 +75,12 @@ def stop_spark(spark):
 
 @log
 def create_spark_df(
-    spark,
-    source_file_path,
-    asset_file_type,
-    asset_file_delim,
-    asset_file_header,
-    logger=None,
+        spark,
+        source_file_path,
+        asset_file_type,
+        asset_file_delim,
+        asset_file_header,
+        logger=None,
 ):
     """
 
@@ -122,10 +122,17 @@ class DecimalEncoder(json.JSONEncoder):
         return super(DecimalEncoder, self).default(o)
 
 
-def dynamodbJsonToDict(dynamodbJson):
-    for i in dynamodbJson["Items"]:
-        items = json.dumps(i, cls=DecimalEncoder)
-    return json.loads(items)
+def convert_to_dict(response):
+    """
+    Called function used in get_target_system_info function
+    :param response:
+    :return:
+    """
+    converted_list = dict()
+    for key, value in response["Item"].items():
+        x = list(value.values())
+        converted_list[key] = x[0]
+    return converted_list
 
 
 @log
@@ -218,12 +225,12 @@ def move_source_file(path, dq_result=None, schema_validation=None, logger=None):
 
 @log
 def store_sparkdf_to_s3(
-    dataframe,
-    target_path,
-    asset_file_type,
-    asset_file_delim,
-    asset_file_header,
-    logger=None,
+        dataframe,
+        target_path,
+        asset_file_type,
+        asset_file_delim,
+        asset_file_header,
+        logger=None,
 ):
     """
     utility method to store a Spark dataframe to S3 bucket
@@ -232,6 +239,7 @@ def store_sparkdf_to_s3(
     :param asset_file_type: Type of the file that the dataframe should be written as
     :param asset_file_delim: The delimiter
     :param asset_file_header: The header true/false
+    :param logger:
     :return:
     """
     target_path = target_path.replace("s3://", "s3a://")
@@ -250,15 +258,16 @@ def store_sparkdf_to_s3(
 
 
 @log
-def get_secret(secretname, regionname, logger=None):
+def get_secret(secret_nm, region_nm, logger=None):
     """
     Utility function to get secret key from secrets manager for tokenising in data masking
     :param secretname: The name of the secret key that is used for tokenisazation
     :param regionname: The AWS region for e.g. us-east-1
+    :param:logger
     :return:
     """
-    secret_name = secretname
-    region_name = regionname
+    secret_name = secret_nm
+    region_name = region_nm
 
     # Create a Secrets Manager client
     session = boto3.session.Session()
@@ -306,24 +315,46 @@ def get_secret(secretname, regionname, logger=None):
 
 
 def get_timestamp(source_path):
+    """
+    Utility function to get timestamp from source path
+    :param source_path: The s3 uri
+    :return:
+    """
     return source_path.split("/")[5]
 
 
 @log
 def get_target_system_info(fm_prefix, target_id, region, logger=None):
-    dynamodb = boto3.resource("dynamodb", region_name=region)
-    table = f"{fm_prefix}.target_system"
-    logger.write(message=f"Getting asset info from {table}")
-    target_system_info = dynamodb.Table(table)
-    target_system_items = target_system_info.query(
-        KeyConditionExpression=Key("tgt_sys_id").eq(int(target_id))
+    """
+    Utility function to get the items from target system
+    :param fm_prefix: fm_prefix
+    :param target_id: The id of target
+    :param region: The AWS region for e.g. us-east-1
+    :param logger:
+    :return:
+    """
+    client = boto3.client('dynamodb', region_name=region)
+    response = client.get_item(
+        TableName=f"{fm_prefix}.target_system",
+        Key={
+            'tgt_sys_id': {'N': str(target_id)},
+            'bucket_name': {'S': f"{fm_prefix}-tgt-{target_id}-{region}"},
+        }
     )
-    target_items = dynamodbJsonToDict(target_system_items)
+    target_items = convert_to_dict(response)
     return target_items
 
 
 @log
 def get_standardization_path(target_system_info, asset_id, timestamp, logger=None):
+    """
+    Utility function to get the path where the standardized file should be stored
+    :param target_system_info: Dictionary containing target system info
+    :param asset_id: Asset id
+    :param timestamp: the timestamp
+    :param logger: logger
+    :return:
+    """
     target_bucket_name = target_system_info["bucket_name"]
     target_subdomain = target_system_info["subdomain"]
-    return f"s3a://{target_bucket_name}/{target_subdomain}/{asset_id}/{timestamp}/"
+    return f"s3://{target_bucket_name}/{target_subdomain}/{asset_id}/{timestamp}/"
