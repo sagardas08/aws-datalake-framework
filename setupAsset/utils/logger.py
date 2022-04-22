@@ -2,7 +2,13 @@ from datetime import datetime, timedelta
 from io import StringIO
 import functools
 from pathlib import Path
-from logging import getLogger, Formatter, StreamHandler, FileHandler, getLevelName
+from logging import (
+    getLogger,
+    Formatter,
+    StreamHandler,
+    FileHandler,
+    getLevelName,
+)
 
 import boto3
 
@@ -19,7 +25,11 @@ NOTSET = 0
 
 class Logger:
     def __init__(
-        self, level=WARNING, log_type="C", log_name="delete-logger", file_name=None
+        self,
+        level=WARNING,
+        log_type="C",
+        log_name="delete-logger",
+        file_name=None,
     ):
         """
         Logger class to instantiate a logging object
@@ -110,14 +120,19 @@ def log(function_to_decorate=None, *, param_logger=None):
                     x for x in kwargs.values() if isinstance(x, Logger)
                 ] + [x for x in args if isinstance(x, Logger)]
                 logger = next(
-                    iter(logger_params), Logger(log_name="root-logger", log_type="C")
+                    iter(logger_params),
+                    Logger(log_name="root-logger", log_type="C"),
                 )
             else:
                 logger = param_logger
             func_name = func.__name__
-            args_repr = [repr(arg) for arg in args if not isinstance(arg, Logger)]
+            args_repr = [
+                repr(arg) for arg in args if not isinstance(arg, Logger)
+            ]
             kwargs_repr = [
-                f"{k}={v}" for k, v in kwargs.items() if not isinstance(v, Logger)
+                f"{k}={v}"
+                for k, v in kwargs.items()
+                if not isinstance(v, Logger)
             ]
             signature = ", ".join(args_repr + kwargs_repr)
             try:
