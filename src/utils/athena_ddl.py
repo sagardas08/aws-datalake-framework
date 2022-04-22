@@ -58,24 +58,29 @@ def generate_ddl(df, db, table, path, partition, encrypt):
     :param encrypt: Flag to enable / disable encryption of underlying dataset.
     :return: string
     """
-
+    # Get the data types of the different columns
     fields = df.dtypes
+    # If the location path is of the s3a format, change it to s3
     loc_path = "LOCATION " + f"'{path.replace('s3a', 's3')}'"
+    # dynamically add fields to the schema
     schema = ""
     for field in fields:
         column = field[0]
         datatype = field[1]
         schema += f"`{column}` {datatype},"
     schema = schema.rstrip(",")
+    # setting the Table properties
     encryption = 'false' if not encrypt else 'true'
-    # Partition is currently hardcoded. TODO: Add a partition logic
+    # TODO: Partition is currently hardcoded. Add a partition logic
     partition_string = f"PARTITIONED BY (partition_instance bigint)"
     row_format = "ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' "
     input_format = "STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' "
     output_format = "OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'"
     tbl_prop = f"TBLPROPERTIES ('has_encrypted_data'='{encryption}')"
+    # creating the dynamic sql statement
     statement = f"CREATE EXTERNAL TABLE `{db}`.`{table}`({schema}) {row_format} " \
                 f"{input_format} {output_format} {loc_path} {tbl_prop}"
+    # if partition is enabled, currently supported to a single partition column
     if partition:
         statement = f"CREATE EXTERNAL TABLE IF NOT EXISTS `{db}`.`{table}`({schema}) " \
                     f"{partition_string} {row_format} {input_format} {output_format} {loc_path} {tbl_prop}"
@@ -84,11 +89,7 @@ def generate_ddl(df, db, table, path, partition, encrypt):
 
 def exists_query(client, table, exec_id):
     """
-
-    :param client:
-    :param table:
-    :param exec_id:
-    :return:
+    returns if a table exists in the said DB or not
     """
     query_result = client.get_query_results(QueryExecutionId=exec_id)
     result_set = query_result['ResultSet']

@@ -2,7 +2,13 @@ from datetime import datetime, timedelta
 from io import StringIO
 import functools
 from pathlib import Path
-from logging import getLogger, Formatter, StreamHandler, FileHandler, getLevelName
+from logging import (
+    getLogger,
+    Formatter,
+    StreamHandler,
+    FileHandler,
+    getLevelName,
+)
 
 import boto3
 
@@ -108,7 +114,9 @@ class Logger:
             s3 = boto3.resource("s3", region_name=self.region)
             content = self.string_object.getvalue()
             try:
-                s3.Object(self.log_bucket, self.file_name).put(Body=content)
+                s3.Object(self.log_bucket, self.file_name).put(
+                    Body=content
+                )
             except Exception as e:
                 raise e
 
@@ -124,19 +132,28 @@ def log(function_to_decorate=None, *, param_logger=None):
     def decorator_log(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            # if a log object is passed in the params of the function
+            # it will be searched and used, otherwise a new object will be created
             if param_logger is None:
                 logger_params = [
                     x for x in kwargs.values() if isinstance(x, Logger)
                 ] + [x for x in args if isinstance(x, Logger)]
                 logger = next(
-                    iter(logger_params), Logger(log_name="root-logger", log_type="C")
+                    iter(logger_params),
+                    Logger(log_name="root-logger", log_type="C"),
                 )
             else:
                 logger = param_logger
+            # getting the name of the function using in-built method
             func_name = func.__name__
-            args_repr = [repr(arg) for arg in args if not isinstance(arg, Logger)]
+            # extract the function signature (the variables which are passed to a func)
+            args_repr = [
+                repr(arg) for arg in args if not isinstance(arg, Logger)
+            ]
             kwargs_repr = [
-                f"{k}={v}" for k, v in kwargs.items() if not isinstance(v, Logger)
+                f"{k}={v}"
+                for k, v in kwargs.items()
+                if not isinstance(v, Logger)
             ]
             signature = ", ".join(args_repr + kwargs_repr)
             try:

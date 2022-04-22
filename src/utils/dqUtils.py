@@ -41,7 +41,7 @@ def deequ_equivalent(config, check):
 
 def build_constraint(column, assertion, check):
     """
-    utility method to build a constraint check based on the column
+    utility method to build a string constraint check based on the column
     :param column: The name of the column
     :param assertion: An optional lambda function
     :param check: The kind of check to be performed -> min / max / primary key etc
@@ -83,11 +83,10 @@ def generate_assertion(constraint, value=None):
 def generate_code(responses, logger=None, adv_dq_info=None):
     """
     utility method to generate Pydeequ code based on asset metadata
-    :param adv_dq_info:
-    :param responses: A list of dictionary objects
-    :param logger:
     :return: String object
     """
+    # check if advance dq is required or not
+    # if it is required, then continue with list of adv_dq rules
     if adv_dq_info:
         check_list = adv_dq_info
     else:
