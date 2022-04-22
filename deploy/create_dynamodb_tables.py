@@ -3,11 +3,9 @@ import boto3
 
 
 def create_source_system_table(prefix, region=None):
+    # TODO: DynamoDB -> RDS: Create Table
     """
     Creates dynamodb table for source system
-    :param prefix:
-    :param region:
-    :return:
     """
     dynamodb = boto3.client("dynamodb", region_name=region)
     existing_tables = dynamodb.list_tables()["TableNames"]
@@ -28,11 +26,9 @@ def create_source_system_table(prefix, region=None):
 
 
 def create_data_asset_table(prefix, region):
+    # TODO: DynamoDB -> RDS: Create Table
     """
     Creates dynamodb table for data asset
-    :param prefix:
-    :param region:
-    :return:
     """
     dynamodb = boto3.client("dynamodb", region_name=region)
     existing_tables = dynamodb.list_tables()["TableNames"]
@@ -53,11 +49,9 @@ def create_data_asset_table(prefix, region):
 
 
 def create_target_system_table(prefix, region):
+    # TODO: DynamoDB -> RDS: Create Table
     """
     Creates dynamodb table for target system
-    :param prefix:
-    :param region:
-    :return:
     """
     dynamodb = boto3.client("dynamodb", region_name=region)
     existing_tables = dynamodb.list_tables()["TableNames"]

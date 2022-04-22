@@ -4,17 +4,16 @@ import boto3
 def create_dq_job(config, region=None):
     """
     Creates DQ job on glue
-    :param config:
-    :param region:
-    :return:
     """
     region = config["primary_region"] if region is None else region
     fm_prefix = config["fm_prefix"]
-    project = config['project_name']
+    project = config["project_name"]
     client = boto3.client("glue", region_name=region)
     job_name = f"{fm_prefix}-data-quality-checks"
+    # delete the previous glue job
     client.delete_job(JobName=job_name)
     code_bucket = f"s3://{fm_prefix}-code-{region}"
+    # location of the glue job in the code bucket
     script_location = f"{code_bucket}/{project}/src/genericDqChecks.py"
     default_args = {
         "--extra-py-files": f"{code_bucket}/{project}/dependencies/pydeequ.zip,{code_bucket}/{project}/dependencies/utils.zip",
@@ -22,6 +21,7 @@ def create_dq_job(config, region=None):
         "--extra-jars": f"{code_bucket}/{project}/dependencies/deequ-1.0.3.jar",
         "--TempDir": f"{code_bucket}/temporary/",
     }
+    # create the new glue job
     response = client.create_job(
         Name=job_name,
         Description="Data Quality Job",
@@ -43,25 +43,25 @@ def create_dq_job(config, region=None):
 def create_masking_job(config, region=None):
     """
     Creates the Data Masking job on aws glue
-    :param config:
-    :param region:
-    :return:
     """
     region = config["primary_region"] if region is None else region
     fm_prefix = config["fm_prefix"]
-    project = config['project_name']
+    project = config["project_name"]
     client = boto3.client("glue", region_name=region)
     job_name = f"{fm_prefix}-data-masking"
+    # delete the previously existing glue job
     client.delete_job(JobName=job_name)
     code_bucket = f"s3://{fm_prefix}-code-{region}"
+    # location of the script in the code bucket
     script_location = f"{code_bucket}/{project}/src/genericDataMasking.py"
     default_args = {
         "--extra-py-files": f"{code_bucket}/{project}/dependencies/pydeequ.zip,{code_bucket}/{project}/dependencies/utils.zip",
         "--extra-files": f"{code_bucket}/{project}/config/globalConfig.json",
         "--extra-jars": f"{code_bucket}/{project}/dependencies/deequ-1.0.3.jar",
         "--TempDir": f"{code_bucket}/temporary/",
-        "--additional-python-modules": "Crypto,packaging,rfc3339,cape-privacy[spark]"
+        "--additional-python-modules": "Crypto,packaging,rfc3339,cape-privacy[spark]",
     }
+    # create a new job
     response = client.create_job(
         Name=job_name,
         Description="Data Masking Job",
@@ -83,24 +83,24 @@ def create_masking_job(config, region=None):
 def create_standardization_job(config, region=None):
     """
     Creates the data standardization job on aws glue
-    :param config:
-    :param region:
-    :return:
     """
     region = config["primary_region"] if region is None else region
     fm_prefix = config["fm_prefix"]
-    project = config['project_name']
+    project = config["project_name"]
     client = boto3.client("glue", region_name=region)
     job_name = f"{fm_prefix}-data-standardization"
+    # delete the previously existing glue job
     client.delete_job(JobName=job_name)
     code_bucket = f"s3://{fm_prefix}-code-{region}"
+    # location of the data standardization script in the code bucket
     script_location = f"{code_bucket}/{project}/src/genericDataStandardization.py"
     default_args = {
         "--extra-py-files": f"{code_bucket}/{project}/dependencies/pydeequ.zip,{code_bucket}/{project}/dependencies/utils.zip",
         "--extra-files": f"{code_bucket}/{project}/config/globalConfig.json",
         "--extra-jars": f"{code_bucket}/{project}/dependencies/deequ-1.0.3.jar",
-        "--TempDir": f"{code_bucket}/temporary/"
+        "--TempDir": f"{code_bucket}/temporary/",
     }
+    # create a new glue job
     response = client.create_job(
         Name=job_name,
         Description="Data Standardization Job",
@@ -121,10 +121,7 @@ def create_standardization_job(config, region=None):
 
 def create_glue_jobs(config, region=None):
     """
-    Main entry method
-    :param config:
-    :param region:
-    :return:
+    Main entry method to create multiple glue jobs
     """
     try:
         create_dq_job(config, region)

@@ -5,6 +5,9 @@ import boto3
 
 
 def sfn_exists(client, arn):
+    """
+    check if the step function with the specified arn exists or not
+    """
     response = client.list_state_machines()
     for i in response["stateMachines"]:
         if i["stateMachineArn"] == arn:
@@ -13,12 +16,19 @@ def sfn_exists(client, arn):
 
 
 def delete_state_machine(client, arn):
+    """
+    method to delete the state machine
+    """
     response = client.delete_state_machine(stateMachineArn=arn)
     while sfn_exists(client, arn):
         time.sleep(5)
 
 
 def create_state_machine(client, sfn_name, asl_definition, acc_number):
+    """
+    method to create a state machine based on the ASL definition
+    """
+    # The role needs to be checked and updated accordingly
     response = client.create_state_machine(
         name=sfn_name,
         definition=json.dumps(asl_definition),
@@ -37,10 +47,7 @@ def create_state_machine(client, sfn_name, asl_definition, acc_number):
 
 def create_step_function(config, region=None):
     """
-    Creates step function
-    :param config:
-    :param region:
-    :return:
+    Creates a step function
     """
     status = True
     region = config["primary_region"] if region is None else region
@@ -61,25 +68,20 @@ def create_step_function(config, region=None):
                         "--source_path.$": "$.source_path",
                         "--source_id.$": "$.source_id",
                         "--asset_id.$": "$.asset_id",
-                        "--exec_id.$": "$.exec_id"
-                    }
+                        "--exec_id.$": "$.exec_id",
+                    },
                 },
                 "Catch": [
                     {
-                        "ErrorEquals": [
-                            "States.TaskFailed"
-                        ],
+                        "ErrorEquals": ["States.TaskFailed"],
                         "ResultPath": "$.error-info.cause",
-                        "Next": "dq_fallback"
+                        "Next": "dq_fallback",
                     }
                 ],
                 "Next": "Data Masking",
-                "ResultPath": None
+                "ResultPath": None,
             },
-            "dq_fallback": {
-                "Type": "Pass",
-                "Next": "trigger_alert"
-            },
+            "dq_fallback": {"Type": "Pass", "Next": "trigger_alert"},
             "Data Masking": {
                 "Type": "Task",
                 "Resource": "arn:aws:states:::glue:startJobRun.sync",
@@ -89,25 +91,20 @@ def create_step_function(config, region=None):
                         "--source_path.$": "$.source_path",
                         "--source_id.$": "$.source_id",
                         "--asset_id.$": "$.asset_id",
-                        "--exec_id.$": "$.exec_id"
-                    }
+                        "--exec_id.$": "$.exec_id",
+                    },
                 },
                 "Catch": [
                     {
-                        "ErrorEquals": [
-                            "States.TaskFailed"
-                        ],
+                        "ErrorEquals": ["States.TaskFailed"],
                         "ResultPath": "$.error-info.cause",
-                        "Next": "dm_fallback"
+                        "Next": "dm_fallback",
                     }
                 ],
                 "Next": "Data Standardization",
-                "ResultPath": None
+                "ResultPath": None,
             },
-            "dm_fallback": {
-                "Type": "Pass",
-                "Next": "trigger_alert"
-            },
+            "dm_fallback": {"Type": "Pass", "Next": "trigger_alert"},
             "Data Standardization": {
                 "Type": "Task",
                 "Resource": "arn:aws:states:::glue:startJobRun.sync",
@@ -117,49 +114,44 @@ def create_step_function(config, region=None):
                         "--source_path.$": "$.source_path",
                         "--source_id.$": "$.source_id",
                         "--asset_id.$": "$.asset_id",
-                        "--exec_id.$": "$.exec_id"
-                    }
+                        "--exec_id.$": "$.exec_id",
+                    },
                 },
                 "Catch": [
                     {
-                        "ErrorEquals": [
-                            "States.TaskFailed"
-                        ],
+                        "ErrorEquals": ["States.TaskFailed"],
                         "ResultPath": "$.error-info.cause",
-                        "Next": "ds_fallback"
+                        "Next": "ds_fallback",
                     }
                 ],
                 "Next": "Success",
-                "ResultPath": None
+                "ResultPath": None,
             },
-            "ds_fallback": {
-                "Type": "Pass",
-                "Next": "trigger_alert"
-            },
+            "ds_fallback": {"Type": "Pass", "Next": "trigger_alert"},
             "trigger_alert": {
                 "Type": "Task",
                 "Resource": "arn:aws:states:::lambda:invoke",
                 "Parameters": {
                     "FunctionName": "dl-fmwrk-trigger-alert",
-                    "Payload": {
-                        "error_info.$": "$.error-info.cause"
-                    }
+                    "Payload": {"error_info.$": "$.error-info.cause"},
                 },
-                "End": True
+                "End": True,
             },
-            "Success": {
-                "Type": "Succeed"
-            }
-        }
+            "Success": {"Type": "Succeed"},
+        },
     }
     client = boto3.client("stepfunctions", region_name=region)
     if sfn_exists(client, arn):
-        update = str(input("Do you want to update the step function [Y/N]:  "))
+        update = str(
+            input("Do you want to update the step function [Y/N]:  ")
+        )
         if update.lower() == "y":
             print("Step function is being updated ...")
             try:
                 delete_state_machine(client, arn)
-                create_state_machine(client, sfn_name, asl_definition, acc_no)
+                create_state_machine(
+                    client, sfn_name, asl_definition, acc_no
+                )
             except Exception as e:
                 print(e)
                 status = False
