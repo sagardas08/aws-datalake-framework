@@ -1,6 +1,9 @@
 import sys
 import time
 from awsglue.utils import getResolvedOptions
+from awsglue.context import GlueContext
+from awsglue.job import Job
+from pyspark.context import SparkContext
 from utils.data_asset import DataAsset
 from utils.comUtils import *
 from utils.standardizationUtils import *
@@ -26,6 +29,11 @@ start_time = time.time()
 
 # Creating a spark session object
 spark = sql.SparkSession.builder.getOrCreate()
+
+# Creating a job 
+job = Job(GlueContext(SparkContext.getOrCreate()))
+job.init(args["JOB_NAME"], args)
+
 asset = DataAsset(args, global_config, run_identifier="data-standardization")
 try:
     # Creating spark dataframe from input file.Supported:CSV,Parquet,JSON,ORC
@@ -88,3 +96,5 @@ asset.logger.write(message=f"Time Taken = {total_time_taken} seconds")
 asset.logger.write_logs_to_s3()
 # Stop the spark session
 stop_spark(spark)
+# Committing the job
+job.commit()

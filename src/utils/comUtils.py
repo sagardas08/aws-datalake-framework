@@ -30,8 +30,15 @@ def update_data_catalog(
     logger=None,
 ):
     # TODO: DynamoDB -> RDS: Update Data
+    # method to update the data catalog entry
     """
-    method to update the data catalog entry
+    :param table_name:
+    :param exec_id:
+    :param dq_validation:
+    :param data_masking:
+    :param data_standardization:
+    :param logger:
+    :return:
     """
     table = boto3.resource("dynamodb").Table(table_name)
     response = table.get_item(Key={"exec_id": exec_id})
@@ -81,9 +88,16 @@ def create_spark_df(
     asset_file_header,
     logger=None,
 ):
+    # Generates a spark dataframe from the source file based
+    # on the different file conditions as specified in the asset info
     """
-    Generates a spark dataframe from the source file based
-    on the different file conditions as specified in the asset info
+    :param spark:
+    :param source_file_path:
+    :param asset_file_type:
+    :param asset_file_delim:
+    :param asset_file_header:
+    :param logger:
+    :return:
     """
     source_df = None
     if asset_file_type == "csv" and asset_file_header == True:
@@ -120,11 +134,24 @@ class DecimalEncoder(json.JSONEncoder):
         return super(DecimalEncoder, self).default(o)
 
 
+
+def convert_to_dict(response):
+    """
+    :param response:
+    :return:
+    """
+    converted_dict = dict()
+    for key, value in response["Item"].items():
+        x = list(value.values())
+        converted_dict[key] = x[0]
+    return converted_dict
+
 def dynamodbJsonToDict(dynamodbJson):
     items = None
     for i in dynamodbJson["Items"]:
         items = json.dumps(i, cls=DecimalEncoder)
     return json.loads(items)
+
 
 
 @log
@@ -149,8 +176,11 @@ def get_metadata(table, region, logger=None):
 
 @log
 def check_failure(dataframe, logger):
+    # method to check if any of the constraint checks has failed
     """
-    method to check if any of the constraint checks has failed
+    :param dataframe:
+    :param logger:
+    :return:
     """
     # set the failure flag to false initially
     fail = False
@@ -170,8 +200,11 @@ def check_failure(dataframe, logger):
 
 @log
 def move_file(path, logger=None):
+    # utility method to move a file if a failure is encountered
     """
-    utility method to move a file if a failure is encountered
+    :param path:
+    :param logger:
+    :return:
     """
     # extracting the bucket name
     split_path = path.split("/")
@@ -260,8 +293,8 @@ def store_sparkdf_to_s3(
 @log
 def get_secret(secret_nm, region_nm, logger=None):
     """
-    Utility function to get secret key from secrets manager for tokenising in data masking
-    :param secret_nm: The name of the secret key that is used for tokenisazation
+    Utility function to get secret key from secrets manager for tokenizing in data masking
+    :param secret_nm: The name of the secret key that is used for tokenization
     :param region_nm: The AWS region for e.g. us-east-1
     :param:logger
     :return:
@@ -332,23 +365,25 @@ def get_timestamp(source_path):
 
 @log
 def get_target_system_info(fm_prefix, target_id, region, logger=None):
-    # TODO: DynamoDB -> RDS: Retrieve Data
     """
-    Utility function to get information of the target system
+    Utility function to get the items from target system
     :param fm_prefix: fm_prefix
     :param target_id: The id of target
     :param region: The AWS region for e.g. us-east-1
-    :param logger: logger
+    :param logger:
     :return:
     """
-    dynamodb = boto3.resource("dynamodb", region_name=region)
-    table = f"{fm_prefix}.target_system"
-    logger.write(message=f"Getting asset info from {table}")
-    target_system_info = dynamodb.Table(table)
-    target_system_items = target_system_info.query(
-        KeyConditionExpression=Key("tgt_sys_id").eq(int(target_id))
+    
+    # TODO: DynamoDB -> RDS: Retrieve Data
+    client = boto3.client('dynamodb', region_name=region)
+    response = client.get_item(
+        TableName=f"{fm_prefix}.target_system",
+        Key={
+            'tgt_sys_id': {'N': str(target_id)},
+            'bucket_name': {'S': f"{fm_prefix}-tgt-{target_id}-{region}"},
+        }
     )
-    target_items = dynamodbJsonToDict(target_system_items)
+    target_items = convert_to_dict(response)
     return target_items
 
 
@@ -366,7 +401,7 @@ def get_standardization_path(
     """
     target_bucket_name = target_system_info["bucket_name"]
     target_subdomain = target_system_info["subdomain"]
-    return f"s3a://{target_bucket_name}/{target_subdomain}/{asset_id}/{timestamp}/"
+    return f"s3://{target_bucket_name}/{target_subdomain}/{asset_id}/{timestamp}/"
 
 
 def get_athena_path(target_system_info, asset_id):
