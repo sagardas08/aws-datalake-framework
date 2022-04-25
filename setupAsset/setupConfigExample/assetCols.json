@@ -9,7 +9,8 @@
       "data_type": "Integral",
       "nullable": false,
       "pk_ind": false,
-      "req_tokenization": false
+      "req_tokenization": false,
+      "tgt_col_nm": "quality_of_faculty"
     },
     { "col_desc": "column",
       "col_id": 8,
@@ -19,7 +20,8 @@
       "data_type": "Integral",
       "nullable": false,
       "pk_ind": false,
-      "req_tokenization": false
+      "req_tokenization": false,
+      "tgt_col_nm": "publications"
     },
     { "col_desc": "column",
       "col_id": 10,
@@ -29,7 +31,8 @@
       "data_type": "Integral",
       "nullable": false,
       "pk_ind": false,
-      "req_tokenization": false
+      "req_tokenization": false,
+      "tgt_col_nm": "citations"
     },
     { "col_desc": "column",
       "col_id": 3,
@@ -39,7 +42,8 @@
       "data_type": "String",
       "nullable": false,
       "pk_ind": false,
-      "req_tokenization": false
+      "req_tokenization": false,
+      "tgt_col_nm": "country"
     },
     { "col_desc": "column",
       "col_id": 2,
@@ -49,7 +53,8 @@
       "data_type": "String",
       "nullable": false,
       "pk_ind": false,
-      "req_tokenization": false
+      "req_tokenization": false,
+      "tgt_col_nm": "institution"
     },
     { "col_desc": "column",
       "col_id": 14,
@@ -59,7 +64,8 @@
       "data_type": "Integral",
       "nullable": false,
       "pk_ind": false,
-      "req_tokenization": false
+      "req_tokenization": false,
+      "tgt_col_nm": "year"
     },
     { "col_desc": "column",
       "col_id": 12,
@@ -69,7 +75,8 @@
       "data_type": "Integral",
       "nullable": false,
       "pk_ind": false,
-      "req_tokenization": false
+      "req_tokenization": false,
+      "tgt_col_nm": "patents"
     },
     { "col_desc": "column",
       "col_id": 9,
@@ -79,7 +86,8 @@
       "data_type": "Integral",
       "nullable": false,
       "pk_ind": false,
-      "req_tokenization": false
+      "req_tokenization": false,
+      "tgt_col_nm": "influence"
     },
     { "col_desc": "column",
       "col_id": 4,
@@ -89,7 +97,8 @@
       "data_type": "Integral",
       "nullable": false,
       "pk_ind": false,
-      "req_tokenization": false
+      "req_tokenization": false,
+      "tgt_col_nm": "national_rank"
     },
     { "col_desc": "column",
       "col_id": 13,
@@ -99,7 +108,8 @@
       "data_type": "Numeric",
       "nullable": false,
       "pk_ind": false,
-      "req_tokenization": false
+      "req_tokenization": false,
+      "tgt_col_nm": "score"
     },
     { "col_desc": "column",
       "col_id": 6,
@@ -109,7 +119,8 @@
       "data_type": "Integral",
       "nullable": false,
       "pk_ind": false,
-      "req_tokenization": false
+      "req_tokenization": false,
+      "tgt_col_nm": "alumni_employment"
     },
     { "col_desc": "column",
       "col_id": 1,
@@ -118,8 +129,9 @@
       "data_classification": "non-confidential",
       "data_type": "Integral",
       "nullable": false,
-      "pk_ind": true,
-      "req_tokenization": false
+      "pk_ind": false,
+      "req_tokenization": false,
+      "tgt_col_nm": "world_rank"
     },
     { "col_desc": "column",
       "col_id": 5,
@@ -129,7 +141,8 @@
       "data_type": "Integral",
       "nullable": false,
       "pk_ind": false,
-      "req_tokenization": false
+      "req_tokenization": false,
+      "tgt_col_nm": "quality_of_education"
     },
     { "col_desc": "column",
       "col_id": 11,
@@ -139,7 +152,19 @@
       "data_type": "Integral",
       "nullable": false,
       "pk_ind": false,
-      "req_tokenization": false
+      "req_tokenization": false,
+      "tgt_col_nm": "broad_impact"
+    },
+    { "col_desc": "column",
+      "col_id": 15,
+      "col_length": 0,
+      "col_nm": "identifier",
+      "data_classification": "non-confidential",
+      "data_type": "Integral",
+      "nullable": false,
+      "pk_ind": true,
+      "req_tokenization": false,
+      "tgt_col_nm": "unique_identifier"
     }
   ]
 }

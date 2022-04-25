@@ -4,40 +4,40 @@ import boto3
 from .logger import log
 
 
-def get_schema_details(table):
+def get_schema_details(table, region):
     """
-
-    :param table:
-    :return:
+    Get the details of schema from DynamoDB
     """
+    # TODO: DynamoDB -> RDS: Retrieve Data
     dct = dict()
     response_list = list()
-    client = boto3.client("dynamodb", region_name="us-east-1")
+    client = boto3.client("dynamodb", region_name=region)
     response = client.scan(TableName=table)["Items"]
     return response
 
 
 def order_columns(items):
     """
-
-    :param items:
-    :return:
+    Orders the columns according to their col_id
+    :param items: iterable object containing col_id and col_name
+    :return: list of columns
     """
     schema_dict = dict()
     for item in items:
         col_id = item["col_id"]["N"]
         col_name = item["col_nm"]["S"]
         schema_dict[col_name] = int(col_id)
+    # sorting on the basis of numeric col_id
     columns = sorted(schema_dict, key=schema_dict.get)
     return columns
 
 
 def match_in_order(actual, expected):
     """
-
-    :param actual:
-    :param expected:
-    :return:
+    Method to match the order of source columns and the order in the asset info table
+    :param actual: actual order present in source file
+    :param expected: the expected order according to the asset_info table
+    :return: Bool, list
     """
     zipped_cols = zip(actual, expected)
     difference = dict()
@@ -51,10 +51,7 @@ def match_in_order(actual, expected):
 
 def match_without_order(actual, expected):
     """
-
-    :param actual:
-    :param expected:
-    :return:
+    method to match 2 lists irrespective of their order
     """
     matching = [i for i in actual if i in expected]
     if len(matching) == len(actual) == len(expected):
@@ -65,10 +62,7 @@ def match_without_order(actual, expected):
 
 def match_length(actual, expected):
     """
-
-    :param actual:
-    :param expected:
-    :return:
+    method to match the length of 2 lists
     """
     if len(actual) == len(expected):
         return True
@@ -77,19 +71,22 @@ def match_length(actual, expected):
 
 @log
 def validate_schema(
-    asset_file_type, asset_file_header, df, metadata_table, logger=None
+    asset_file_type,
+    asset_file_header,
+    df,
+    metadata_table,
+    region,
+    logger=None,
 ):
     """
     Target Function to enforce schema validation
-    :param logger:
-    :param asset_file_type:
-    :param asset_file_header:
-    :param df:
-    :param metadata_table:
     :return:
     """
+    # get the list of cols
     df_cols = df.columns
-    schema_details = get_schema_details(metadata_table)
+    # get the details of the schema from the metadata
+    schema_details = get_schema_details(metadata_table, region)
+    # order the columns as per their col_id
     columns = order_columns(schema_details)
     actual_cols = [i.lower() for i in df_cols]
     expected_cols = [i.lower() for i in columns]

@@ -54,13 +54,13 @@ try:
         asset.asset_file_header,
         asset.logger,
     )
+    # Update data catalog table to "Completed" if the masking is successful
+    asset.update_data_catalog(data_masking="Completed")
 except Exception as e:
     # Update data catalog table to "Failed" in case of exceptions
     asset.update_data_catalog(data_masking="Failed")
     asset.logger.write(message=str(e))
 
-# Update data catalog table to "Completed" if the masking is successful
-asset.update_data_catalog(data_masking="Completed")
 end_time = time.time()
 asset.logger.write(message=f"Time Taken = {round(end_time - start_time, 2)} seconds")
 asset.logger.write_logs_to_s3()
