@@ -1,11 +1,19 @@
 import pydeequ
 from pydeequ.profiles import *
-from pydeequ.suggestions import *
 from pydeequ.checks import *
 from pydeequ.verification import *
+from pydeequ.suggestions import *
 from pydeequ.repository import *
-from .dqConfig import Config
+
 from .logger import log
+
+
+PRIMARY_CHECKS = {
+        "null": ".isComplete",
+        "pk": ".isUnique",
+        "data_type": ".hasDataType",
+        "max_length": ".hasMaxLength",
+    }
 
 
 def run_constraint_suggestion(spark, df):
@@ -33,18 +41,18 @@ def deequ_equivalent(config, check):
 
 def build_constraint(column, assertion, check):
     """
-    utility method to build a constraint check based on the column
+    utility method to build a string constraint check based on the column
     :param column: The name of the column
     :param assertion: An optional lambda function
     :param check: The kind of check to be performed -> min / max / primary key etc
     :return: String Deequ constraint object
     """
-    deequ_function = Config.config(check)
+    dq_func = PRIMARY_CHECKS[check]
     if assertion is not None:
-        deequ_constraint = f"{deequ_function}('{column}', {assertion})"
+        dq_constraint = f"{dq_func}('{column}', {assertion})"
     else:
-        deequ_constraint = f"{deequ_function}('{column}')"
-    return deequ_constraint
+        dq_constraint = f"{dq_func}('{column}')"
+    return dq_constraint
 
 
 def dq_dtype(dtype):
@@ -72,14 +80,17 @@ def generate_assertion(constraint, value=None):
 
 
 @log
-def generate_code(responses, logger=None):
+def generate_code(responses, logger=None, adv_dq_info=None):
     """
     utility method to generate Pydeequ code based on asset metadata
-    :param responses: A list of dictionary objects
-    :param logger:
     :return: String object
     """
-    check_list = list()
+    # check if advance dq is required or not
+    # if it is required, then continue with list of adv_dq rules
+    if adv_dq_info:
+        check_list = adv_dq_info
+    else:
+        check_list = list()
     for ob in responses:
         column = ob["col_nm"]
         # Null check

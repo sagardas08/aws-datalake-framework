@@ -10,5 +10,6 @@
   "trigger_file_pattern": "",
   "subj_area_2": "reviews",
   "asset_owner": "Suprakash Nandy",
-  "file_delim": ","
+  "file_delim": ",",
+  "req_encryption": true
 }

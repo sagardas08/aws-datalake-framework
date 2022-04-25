@@ -7,9 +7,12 @@ print("Loading function")
 
 
 def lambda_handler(event, context):
+    # TODO: DynamoDB -> RDS: Create Table + Insert Data
     message = json.loads(event["Records"][0]["Sns"]["Message"])
     bucket = message["Records"][0]["s3"]["bucket"]["name"]
     key = message["Records"][0]["s3"]["object"]["key"]
+    # the env vars are present in the LAMBDA function
+    # and can be updated using the console
     my_region = os.environ["AWS_REGION"]
     fm_prefix = os.environ["fm_prefix"]
     aws_account = os.environ["aws_account"]
@@ -23,12 +26,12 @@ def lambda_handler(event, context):
             source_path, source_id, asset_id
         )
     )
-
+    # generate a execution id for audit purpose
     now = datetime.datetime.now()
     ts = now.strftime("%Y%m%d%H%M%S")
     exec_id = source_id + "_" + asset_id + "_" + str(ts)
     state_machine_name = fm_prefix + "-data-pipeline" + str(ts)
-
+    # replace dynamodb with rds
     dynamodb = boto3.resource("dynamodb", region_name=my_region)
     source_system_table = dynamodb.Table(
         "{}.data_catalog.{}".format(fm_prefix, asset_id)
@@ -38,6 +41,7 @@ def lambda_handler(event, context):
             fm_prefix, asset_id
         )
     )
+    # initial record is inserted in the data catalog table
     response = source_system_table.put_item(
         Item={
             "exec_id": exec_id,
@@ -48,7 +52,7 @@ def lambda_handler(event, context):
             "data_standardization": "not started",
         }
     )
-
+    # Step function execution is triggered
     client = boto3.client("stepfunctions")
     response = client.start_execution(
         stateMachineArn="arn:aws:states:{}:{}:stateMachine:{}-data-pipeline".format(

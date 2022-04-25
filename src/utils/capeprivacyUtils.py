@@ -39,24 +39,29 @@ def run_data_masking(source_df, metadata, key, logger=None):
         frequency=("YEAR", "MONTH", "DAY"), min=(-10, -5, -5), max=(10, 5, 5)
     )
     round_numeric = NumericRounding(dtype=dtypes.Float, precision=-3)
+    # Loop over the metadata to find out if data masking is required or not
     for i in metadata:
         for a, b in i.items():
+            # Tokenize the specified columns
             if a == "req_tokenization" and (str(b) == "True" or str(b) == "true"):
                 col_name = i.get("col_nm")
                 source_df = source_df.withColumn(
                     col_name, tokenize(functions.col(col_name))
                 )
+            # Redacts the specified columns
             if a == "req_redaction" and (str(b) == "True" or str(b) == "true"):
                 col_name = i.get("col_nm")
                 redact_list = []
                 redact_list.append(col_name)
                 redact = ColumnRedact(columns=redact_list)
                 df = redact(df)
+            # Perturbs the date of specified columns
             if a == "req_dateperturbation" and (str(b) == "True" or str(b) == "true"):
                 col_name = i.get("col_nm")
                 source_df = source_df.withColumn(
                     col_name, perturb_date(functions.col(col_name))
                 )
+            # Perturbs the numeric values of specified columns
             if a == "req_numericperturbation" and (
                 str(b) == "True" or str(b) == "true"
             ):
@@ -64,10 +69,12 @@ def run_data_masking(source_df, metadata, key, logger=None):
                 source_df = source_df.withColumn(
                     col_name, perturb_numeric(functions.col(col_name))
                 )
+            # Rounds off values of specified columns
             if a == "req_numericrounding" and (str(b) == "True" or str(b) == "true"):
                 col_name = i.get("col_nm")
                 source_df = source_df.withColumn(
                     col_name, round_numeric(functions.col(col_name))
                 )
     logger.write(message="Data masking done successfully")
+    # Return the masked spark dataframe
     return source_df

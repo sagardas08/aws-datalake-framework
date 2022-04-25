@@ -54,9 +54,13 @@ class DeployPipeline:
         # Initiate rollback in case the method raise any errors
         if not self.rollback:
             self.update_state()
-            deploy_status = deploy_to_s3(self.clone_path, self.config, self.region)
+            deploy_status = deploy_to_s3(
+                self.clone_path, self.config, self.region
+            )
             if deploy_status:
-                deploy_logger.write(message=f"Deployed the latest code to S3")
+                deploy_logger.write(
+                    message=f"Deployed the latest code to S3"
+                )
             else:
                 self.initiate_rollback()
         else:
@@ -75,7 +79,9 @@ class DeployPipeline:
             if not lambda_status:
                 self.initiate_rollback()
             else:
-                deploy_logger.write(message=f"Deployed the Lambda function")
+                deploy_logger.write(
+                    message=f"Deployed the Lambda function"
+                )
         else:
             pass
 
@@ -92,29 +98,37 @@ class DeployPipeline:
             if not create_status:
                 self.initiate_rollback()
             else:
-                deploy_logger.write(message="Deployed rhe Glue jobs")
+                deploy_logger.write(message="Deployed the Glue jobs")
         else:
             pass
 
     def create_dynamodb_tables(self):
         if not self.rollback:
             self.update_state()
-            create_status = create_dynamodb_tables(self.config, self.region)
+            create_status = create_dynamodb_tables(
+                self.config, self.region
+            )
             if not create_status:
                 self.initiate_rollback()
             else:
-                deploy_logger.write(message="Deployed the Dynamo DB Tables")
+                deploy_logger.write(
+                    message="Deployed the Dynamo DB Tables"
+                )
         else:
             pass
 
     def create_step_function(self):
         if not self.rollback:
             self.update_state()
-            create_status = create_step_function(self.config, self.region)
+            create_status = create_step_function(
+                self.config, self.region
+            )
             if not create_status:
                 self.initiate_rollback()
             else:
-                deploy_logger.write(message="Deployed the Step Function")
+                deploy_logger.write(
+                    message="Deployed the Step Function"
+                )
         else:
             pass
 
@@ -123,7 +137,9 @@ class DeployPipeline:
         Helper method for the main rollback method
         :return:
         """
-        deploy_logger.write(message=f"Rolling back Cloning of github repo")
+        deploy_logger.write(
+            message=f"Rolling back Cloning of github repo"
+        )
         remove_clone_dir(self.clone_path)
 
     def _rollback_s3_upload(self):
@@ -170,6 +186,7 @@ class DeployPipeline:
             time.sleep(secs=5)
 
     def _rollback_source_table_creation(self):
+        # TODO: DynamoDB -> RDS: Delete Table
         client = boto3.client("dynamodb", region_name=self.region)
         tables = (
             f"{self.fm_prefix}.source_system",
@@ -178,7 +195,9 @@ class DeployPipeline:
         )
         for table in tables:
             response = client.delete_table(TableName=table)
-            status = f"{response['TableDescription']['TableStatus']} {table}"
+            status = (
+                f"{response['TableDescription']['TableStatus']} {table}"
+            )
             deploy_logger.write(message=status)
             time.sleep(10)
 
@@ -235,7 +254,13 @@ def deploy_region_wise(config, clone_path, deploy_region=None):
         region_vars = [i for i in config.keys() if "region" in i]
         for idx, val in enumerate(region_vars):
             region = config[val]
-            deploy(config, clone_path, region, multi_region=True, iteration=idx)
+            deploy(
+                config,
+                clone_path,
+                region,
+                multi_region=True,
+                iteration=idx,
+            )
         # Removing the clone path after the final deployment
         remove_clone_dir(clone_path)
     else:
@@ -269,7 +294,9 @@ def main():
             deploy_region_wise(config, clone_path, deploy_region="all")
         else:
             # Deploying in the region specified
-            deploy_logger.write(message=f"Deploying in region = {region}")
+            deploy_logger.write(
+                message=f"Deploying in region = {region}"
+            )
             deploy_region_wise(config, clone_path, deploy_region=region)
     else:
         # No region arguments passed hence deploy only in the primary region
