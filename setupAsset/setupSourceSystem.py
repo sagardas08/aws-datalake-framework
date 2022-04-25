@@ -21,6 +21,7 @@ src_sys_id = int(str(random()).split(".")[1])
 
 
 def insert_src_sys_item_dynamoDB(src_json_file, region):
+    # TODO: DynamoDB -> RDS: Insert Data
     global_config = getGlobalParams()
     dynamodb = boto3.resource("dynamodb", region_name=region)
     source_system_table = dynamodb.Table(
@@ -30,7 +31,13 @@ def insert_src_sys_item_dynamoDB(src_json_file, region):
     with open(src_json_file) as json_file:
         src_config = json.load(json_file)
 
-    bucket_name = global_config["fm_prefix"] + "-" + str(src_sys_id) + "-" + region
+    bucket_name = (
+        global_config["fm_prefix"]
+        + "-"
+        + str(src_sys_id)
+        + "-"
+        + region
+    )
     src_sys_nm = src_config["src_sys_nm"]
     mechanism = src_config["mechanism"]
     data_owner = src_config["data_owner"]
@@ -54,6 +61,10 @@ def insert_src_sys_item_dynamoDB(src_json_file, region):
 
 
 def run_aws_cft(src_json_file, region):
+    """
+    method to automate the running of cft
+    :return:
+    """
     global_config = getGlobalParams()
     src_sys_cft = "cft/sourceSystem.yaml"
     with open(src_sys_cft) as yaml_file:
@@ -66,7 +77,11 @@ def run_aws_cft(src_json_file, region):
     )
     stack = boto3.client("cloudformation", region_name=region)
     response = stack.create_stack(
-        StackName=global_config["fm_prefix"] + "-" + str(src_sys_id) + "-" + region,
+        StackName=global_config["fm_prefix"]
+        + "-"
+        + str(src_sys_id)
+        + "-"
+        + region,
         TemplateBody=template_body,
         Parameters=[
             {"ParameterKey": "CurrentRegion", "ParameterValue": region},
@@ -78,15 +93,22 @@ def run_aws_cft(src_json_file, region):
                 "ParameterKey": "AwsAccount",
                 "ParameterValue": global_config["aws_account"],
             },
-            {"ParameterKey": "srcSysId", "ParameterValue": str(src_sys_id)},
+            {
+                "ParameterKey": "srcSysId",
+                "ParameterValue": str(src_sys_id),
+            },
         ],
     )
 
 
 def main():
     global_config = getGlobalParams()
-    insert_src_sys_item_dynamoDB(sys.argv[1], global_config["primary_region"])
-    insert_src_sys_item_dynamoDB(sys.argv[1], global_config["secondary_region"])
+    insert_src_sys_item_dynamoDB(
+        sys.argv[1], global_config["primary_region"]
+    )
+    insert_src_sys_item_dynamoDB(
+        sys.argv[1], global_config["secondary_region"]
+    )
     run_aws_cft(sys.argv[1], global_config["primary_region"])
     run_aws_cft(sys.argv[1], global_config["secondary_region"])
 

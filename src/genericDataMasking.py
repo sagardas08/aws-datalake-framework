@@ -42,12 +42,11 @@ try:
         asset.asset_file_header,
         asset.logger,
     )
+    asset.update_data_catalog(data_masking="Completed")
 except Exception as e:
     asset.update_data_catalog(data_masking="Failed")
     asset.logger.write(message=str(e))
-    move_file(asset.source_path, asset.logger)
 
-asset.update_data_catalog(data_masking="Completed")
 end_time = time.time()
 asset.logger.write(message=f"Time Taken = {round(end_time - start_time, 2)} seconds")
 asset.logger.write_logs_to_s3()

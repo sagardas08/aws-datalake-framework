@@ -4,6 +4,9 @@ from awsglue.utils import getResolvedOptions
 from utils.data_asset import DataAsset
 from utils.comUtils import *
 from utils.standardizationUtils import *
+from utils.athena_ddl import get_or_create_db, \
+    get_or_create_table, manage_partition
+
 
 def get_global_config():
     config_file_path = "globalConfig.json"
@@ -17,7 +20,6 @@ spark = SparkSession.builder.appName('Data-Standardization').getOrCreate()
 args = getResolvedOptions(sys.argv, ["source_path", "source_id", "asset_id", "exec_id"])
 global_config = get_global_config()
 start_time = time.time()
-spark = sql.SparkSession.builder.getOrCreate()
 asset = DataAsset(args, global_config, run_identifier="data-standardization")
 try:
     source_df = create_spark_df(
@@ -39,7 +41,21 @@ try:
         target_system_info, asset.asset_id, timestamp, asset.logger
     )
     result.repartition(1).write.parquet(target_path, mode="overwrite")
+
+    # Storing the target file to Athena with DB = Domain and Table = SUb-domain_AssetId
+    domain = target_system_info['domain']
+    get_or_create_db(asset.region, domain, asset.logger)
+    athena_path = get_athena_path(target_system_info, asset.asset_id)
     asset.update_data_catalog(data_standardization="Completed")
+    get_or_create_table(
+        asset.region, result, target_system_info, asset.asset_name,
+        athena_path, partition=True, encrypt=asset.encryption, logger=asset.logger
+    )
+    manage_partition(
+        asset.region, target_system_info, asset.asset_name,
+        timestamp, target_path, asset.logger
+    )
+
 except Exception as e:
     asset.logger.write(message=str(e))
     asset.update_data_catalog(data_standardization="Failed")
