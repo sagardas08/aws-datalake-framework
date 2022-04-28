@@ -302,14 +302,14 @@ class Connector:
             columns = cols
         sql = self._select(table, columns, where, order, limit)
         params = where[1] if where and len(where) == 2 else None
-        cursor._execute(sql, params)
+        cursor.execute(sql, params)
         records = [dict(i) for i in cursor.fetchall()]
         cursor.close()
         return records
 
     def retrieve_csv(self, table, cols, where=None, order=None, limit=None):
         """
-        Method to retireve the data from table in a CSV format
+        Method to retrieve the data from table in a CSV format
         :param table: string table
         :param cols: list of columns
         :param where: Tuple ("parameterized_statement", [parameters])
@@ -342,6 +342,12 @@ class Connector:
         return cursor.fetchone() if returning else cursor.rowcount
 
     def insert_many(self, table, data: list, returning=None):
+        """
+        Insert multiple records in a single round trip
+        :param table: string
+        :param data: Json List
+        :param returning: Bool
+        """
         try:
             assert isinstance(data, list)
             arg_vals = []
@@ -357,7 +363,7 @@ class Connector:
                                     argslist=arg_vals,
                                     fetch=returning)
             return self.cursor.fetchone() if returning else None
-        except AssertionError as e:
+        except AssertionError:
             raise
 
     def update(self, table, data, where=None, returning=None):
