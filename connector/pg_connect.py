@@ -294,7 +294,7 @@ class Connector:
         """
         # open up a new cursor
         cursor = self.conn.cursor(cursor_factory=pg_extra.RealDictCursor)
-        if cols == "all" or '*':
+        if cols == "all" or cols == '*':
             columns = "*"
         elif isinstance(cols, list):
             columns = ",".join(cols).rstrip(",")
