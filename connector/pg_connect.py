@@ -4,10 +4,12 @@ from collections import namedtuple
 import boto3
 from botocore.exceptions import ClientError
 import psycopg2
+import psycopg2.extras as pg_extra
 
 
 class Connector:
-    def __init__(self, secret=None, region=None, creds=None):
+    def __init__(self, secret=None, region=None,
+                 creds=None, autocommit=False):
         """
         Base constructor of the Connector class
         :param secret: AWS secret name that stores the credentials to connect
@@ -33,13 +35,14 @@ class Connector:
             host=host, port=port,
             database=db, user=user, password=pwd
         )
+        self.conn.autocommit = autocommit
         self.cursor = self.conn.cursor()
 
     def get_credentials(self):
         """
         fetches credentials from the AWS secret manager
         """
-        data = None
+        cred = None
         try:
             get_secret_value_response = self.secrets_client.get_secret_value(
                 SecretId=self.secret_id
@@ -65,9 +68,9 @@ class Connector:
         else:
             if "SecretString" in get_secret_value_response:
                 secret = get_secret_value_response["SecretString"]
-                data = json.loads(secret)
-        assert data is not None
-        return data
+                cred = json.loads(secret)
+        assert cred is not None
+        return cred
 
     def close(self):
         """
@@ -161,62 +164,34 @@ class Connector:
     def _select(
         self,
         table=None,
-        fields=(),
+        cols='*',
         where=None,
         order=None,
         limit=None,
         offset=None,
     ):
         """
-        Run a select query
+        Construct a select query
         """
         sql = (
-            "SELECT %s FROM %s" % (",".join(fields), table)
+            f"SELECT {cols} FROM {table}"
             + self._where(where)
             + self._order(order)
             + self._limit(limit)
             + self._offset(offset)
         )
-        return self.execute(
-            sql, where[1] if where and len(where) == 2 else None
-        )
+        return sql
 
-    def _join(
-        self,
-        tables=(),
-        fields=(),
-        join_fields=(),
-        where=None,
-        order=None,
-        limit=None,
-        offset=None,
-    ):
+    def _execute(self, sql, params=None):
         """
-        Run an inner left join query
+        Executes a raw query
         """
-
-        fields = [tables[0] + "." + f for f in fields[0]] + [
-            tables[1] + "." + f for f in fields[1]
-        ]
-
-        sql = "SELECT {0:s} FROM {1:s} LEFT JOIN {2:s} ON ({3:s} = {4:s})".format(
-            ",".join(fields),
-            tables[0],
-            tables[1],
-            "{0}.{1}".format(tables[0], join_fields[0]),
-            "{0}.{1}".format(tables[1], join_fields[1]),
-        )
-
-        sql += (
-            self._where(where)
-            + self._order(order)
-            + self._limit(limit)
-            + self._offset(offset)
-        )
-
-        return self.execute(
-            sql, where[1] if where and len(where) > 1 else None
-        )
+        try:
+            self.cursor.execute(sql, params)
+        except Exception as e:
+            print(f"execute() failed due to: {e}")
+            raise
+        return self.cursor
 
     def get_version(self):
         """
@@ -237,23 +212,36 @@ class Connector:
         tables = [i[0] for i in self.cursor.fetchall()]
         return tables
 
-    def execute(self, sql, params=None):
+    def execute(self, sql, return_type=None):
         """
-        Executes a raw query
+        execute a raw sql statement
+        :param sql: User constructed SQL statement w/o server side binding
+        for e.g. "Select * from table where id = 20"
+        :param return_type: None / d / dict
+        if the return type is None then it will return a list of tuples
+        if the return type is d/ dict it will return a Json Array
         """
+        if return_type == 'd' or 'dict':
+            cursor = self.conn.cursor(cursor_factory=pg_extra.RealDictCursor)
+        else:
+            cursor = self.conn.cursor()
         try:
-            self.cursor.execute(sql, params)
+            cursor.execute(sql)
+            records = cursor.fetchall() if not return_type else \
+                [dict(i) for i in cursor.fetchall()]
+            cursor.close()
         except Exception as e:
-            print("execute() failed: " + e.message)
+            print(f"execute() failed due to: {e}")
             raise
-        return self.cursor
+        return records
 
     def create(self, table, schema):
         """
         Create a table with the schema provided
         ob.create('my_table','id SERIAL PRIMARY KEY, name TEXT')
         """
-        self.execute("CREATE TABLE %s (%s)" % (table, schema))
+        self._execute(f"CREATE TABLE {table} ({schema})")
+        self.conn.commit()
 
     def truncate(self, table, restart_identity=False, cascade=False):
         """
@@ -261,12 +249,13 @@ class Connector:
         db.truncate('tbl1')
         db.truncate('tbl1, tbl2')
         """
-        sql = "TRUNCATE %s"
+        sql = f"TRUNCATE {table}"
         if restart_identity:
             sql += " RESTART IDENTITY"
         if cascade:
             sql += " CASCADE"
-        self.execute(sql % table)
+        self._execute(sql)
+        self.conn.commit()
 
     def drop(self, table, cascade=False):
         """
@@ -275,11 +264,13 @@ class Connector:
         sql = f"DROP TABLE IF EXISTS {table}"
         if cascade:
             sql += " CASCADE"
-        self.execute(sql)
+        self._execute(sql)
+        self.conn.commit()
 
-    def retrieve(self, table, cols, limit=None):
+    def retrieve(self, table, cols, where, order=None, limit=None):
         """
         Retrieve the data from a table for some cols / all cols
+        :return: list of tuples
         """
         if cols == "all":
             columns = "*"
@@ -287,78 +278,116 @@ class Connector:
             columns = ",".join(cols).rstrip(",")
         else:
             columns = cols
-        query = "SELECT {0} from {1};".format(columns, table)
-        self.cursor.execute(query)
-        # fetch data
-        rows = self.cursor.fetchall()
+        sql = self._select(table, columns, where, order, limit)
+        # params is a tuple where the 0th index is the condition and
+        # the 1st index is the value
+        params = where[1] if where and len(where) == 2 else None
+        cursor = self._execute(sql, params)
+        rows = cursor.fetchall()
+        cursor.close()
         return rows[len(rows) - limit if limit else 0:]
 
-    def join(
-        self,
-        tables=(),
-        cols=(),
-        join_cols=(),
-        where=None,
-        order=None,
-        limit=None,
-        offset=None,
-    ):
+    def retrieve_dict(self, table, cols, where, order=None, limit=None):
         """
-        Run an inner left join query
-         :param tables: Tables to join (T1, T2)
-        :param cols: ([fields from T1], [fields from T2])  -> fields to select
-        :param join_cols: (field1, field2) -> fields to join.
-        -> field1 belongs to table1 and field2 belongs to table 2
-        :param where: = ("parameterized_statement", [parameters])
-                eg: ("id=%s and name=%s", [1, "test"])
+        Retrieve a table / subset of tables in a JSON array format
+        :return: list of dict
+        """
+        # open up a new cursor
+        cursor = self.conn.cursor(cursor_factory=pg_extra.RealDictCursor)
+        if cols == "all" or '*':
+            columns = "*"
+        elif isinstance(cols, list):
+            columns = ",".join(cols).rstrip(",")
+        else:
+            columns = cols
+        sql = self._select(table, columns, where, order, limit)
+        params = where[1] if where and len(where) == 2 else None
+        cursor._execute(sql, params)
+        records = [dict(i) for i in cursor.fetchall()]
+        cursor.close()
+        return records
+
+    def retrieve_csv(self, table, cols, where=None, order=None, limit=None):
+        """
+        Method to retireve the data from table in a CSV format
+        :param table: string table
+        :param cols: list of columns
+        :param where: Tuple ("parameterized_statement", [parameters])
+         for eg: ("id=%s and name=%s", [1, "test"])
         :param order: [field, ASC|DESC]
         :param limit: [limit1, limit2]
-        :param offset:
+        :return: None, stores the file in the csv format in cwd
         """
-        cur = self._join(
-            tables, cols, join_cols, where, order, limit, offset
-        )
-        result = cur.fetchall()
+        if cols == "all" or '*':
+            columns = "*"
+        elif isinstance(cols, list):
+            columns = ",".join(cols).rstrip(",")
+        else:
+            columns = cols
+        sql = self._select(table, columns, where, order, limit)
+        op_query = "COPY ({0}) TO STDOUT WITH CSV HEADER".format(sql)
+        # Note: currently not parameterized to store at a different target location
+        with open(f'{table}.csv', 'w') as f:
+            self.cursor.copy_expert(op_query, f)
+        self.cursor.close()
 
-        rows = None
-        if result:
-            Row = namedtuple("Row", [f[0] for f in cur.description])
-            rows = [Row(*r) for r in result]
-
-        return rows
-
-    def insert(self, table, data, returning=None):
+    def insert(self, table, data: dict, returning=None):
         """
         Insert a single record into the database table
         """
         cols, vals = self._format_insert(data)
-        sql = "INSERT INTO %s (%s) VALUES(%s)" % (table, cols, vals)
+        sql = f"INSERT INTO {table} ({cols}) VALUES({vals})"
         sql += self._returning(returning)
-        print(sql)
-        cur = self.execute(sql, list(data.values()))
-        self.conn.commit()
-        return cur.fetchone() if returning else cur.rowcount
+        cursor = self._execute(sql, list(data.values()))
+        return cursor.fetchone() if returning else cursor.rowcount
+
+    def insert_many(self, table, data: list, returning=None):
+        try:
+            assert isinstance(data, list)
+            arg_vals = []
+            for item in data:
+                value = tuple(item.values())
+                arg_vals.append(value,)
+            data_elem = data[0]
+            cols = ",".join(data_elem.keys())
+            sql = f"INSERT INTO {table} ({cols}) VALUES %s"
+            sql += self._returning(returning)
+            pg_extra.execute_values(cur=self.cursor,
+                                    sql=sql,
+                                    argslist=arg_vals,
+                                    fetch=returning)
+            return self.cursor.fetchone() if returning else None
+        except AssertionError as e:
+            raise
 
     def update(self, table, data, where=None, returning=None):
         """
-        Update + Insert a record more commonly Upsert
+
+        :param table: string table
+        :param data:  dict data to update
+        :param where: Tuple ("parameterized_statement", [parameters])
+         for eg: ("id=%s and name=%s", [1, "test"])
+        :param returning:
+        :return:
         """
         query = self._format_update(data)
         sql = f"UPDATE {table} SET {query}"
         sql += self._where(where) + self._returning(returning)
-        cur = self.execute(
+        cursor = self._execute(
             sql,
             list(data.values()) + where[1]
             if where and len(where) > 1
             else list(data.values()),
         )
-        self.conn.commit()
-        return cur.fetchall() if returning else cur.rowcount
+        return cursor.fetchall() if returning else cursor.rowcount
 
-    def delete(self, table, where=None, returning=None):
+    def delete(self, table, where, returning=None):
         """
         Delete rows based on a where condition
+        where: Tuple ("parameterized_statement", [parameters])
+         for eg: ("id=%s and name=%s", [1, "test"])
         """
-        sql = f"DELETE FROM {table} WHERE {where}"
-        cur = self.execute(sql)
-        return cur.fetchall() if returning else cur.rowcount
+        sql = f'DELETE FROM {table}'
+        sql += self._where(where) + self._returning(returning)
+        cursor = self._execute(sql, where[1] if where and len(where) > 1 else None)
+        return cursor.fetchall() if returning else cursor.rowcount
