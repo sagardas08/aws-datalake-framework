@@ -2,7 +2,11 @@ import json
 import boto3
 import datetime
 import os
+from connector.pg_connect import Connector
+from datetime import datetime
 
+now = datetime.now()
+current_time = now.strftime("%H:%M:%S")
 print("Loading function")
 
 
@@ -26,32 +30,31 @@ def lambda_handler(event, context):
             source_path, source_id, asset_id
         )
     )
+
+    # Create timestamp to act as identifier for every execution
+    ts_now = datetime.datetime.now()
+    ts = ts_now.strftime("%Y%m%d%H%M%S")
     # generate a execution id for audit purpose
-    now = datetime.datetime.now()
-    ts = now.strftime("%Y%m%d%H%M%S")
     exec_id = source_id + "_" + asset_id + "_" + str(ts)
     state_machine_name = fm_prefix + "-data-pipeline" + str(ts)
-    # replace dynamodb with rds
-    dynamodb = boto3.resource("dynamodb", region_name=my_region)
-    source_system_table = dynamodb.Table(
-        "{}.data_catalog.{}".format(fm_prefix, asset_id)
-    )
-    print(
-        "Insert data catalog info in {}.data_catalog.{} table".format(
-            fm_prefix, asset_id
-        )
-    )
+    # Create timestamp to insert in the data catalog to help tract the start time of process
+    time_now = datetime.now()
+    proc_start_ts = time_now.strftime("%H:%M:%S")
     # initial record is inserted in the data catalog table
-    response = source_system_table.put_item(
-        Item={
-            "exec_id": exec_id,
-            "proc_start_ts": str(ts),
-            "source_path": source_path,
-            "dq_validation": "not started",
-            "data_masking": "not started",
-            "data_standardization": "not started",
-        }
-    )
+    insert_data = {
+        "exec_id": exec_id,
+        "src_sys_id": source_id,
+        "asset_id": asset_id,
+        "dq_validation": "not started",
+        "data_standardization": "not started",
+        "data_masking": "not started",
+        "src_file_path": source_path,
+        "proc_start_ts": proc_start_ts,
+    }
+    table_name = "data_asset_catalogs"
+    conn = Connector("postgres_dev", my_region)
+    conn.insert(table=table_name, data=insert_data, returning=None)
+
     # Step function execution is triggered
     client = boto3.client("stepfunctions")
     response = client.start_execution(

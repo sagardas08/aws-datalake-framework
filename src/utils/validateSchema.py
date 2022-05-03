@@ -2,17 +2,15 @@
 import boto3
 
 from .logger import log
+from connector import Connector
 
 
-def get_schema_details(table, region):
+def get_schema_details(table, asset_id, region):
     """
     Get the details of schema from DynamoDB
     """
     # TODO: DynamoDB -> RDS: Retrieve Data
-    dct = dict()
-    response_list = list()
-    client = boto3.client("dynamodb", region_name=region)
-    response = client.scan(TableName=table)["Items"]
+    db.retrieve_dict(rds_table, cols='*', where=('asset_id=%s', [asset_id]))
     return response
 
 
@@ -76,16 +74,17 @@ def validate_schema(
     df,
     metadata_table,
     region,
+    asset_id,
     logger=None,
 ):
-    """
+    """8
     Target Function to enforce schema validation
     :return:
     """
     # get the list of cols
     df_cols = df.columns
     # get the details of the schema from the metadata
-    schema_details = get_schema_details(metadata_table, region)
+    schema_details = get_schema_details(metadata_table, asset_id, region)
     # order the columns as per their col_id
     columns = order_columns(schema_details)
     actual_cols = [i.lower() for i in df_cols]
