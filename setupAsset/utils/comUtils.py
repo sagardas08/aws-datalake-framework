@@ -1,130 +1,77 @@
 import json
-import decimal
-import time
-import sys
 import os
-import random
+
 import boto3
+
+from connector.pg_connect import Connector
 
 
 def getGlobalParams():
-    script_dir = os.path.dirname(
-        __file__
-    )  # <-- absolute dir the script is in
+    # absolute dir the script is in
+    script_dir = os.path.dirname(__file__)
     gbl_cfg_rel_path = "../config/globalConfig.json"
     gbl_cfg_abs_path = os.path.join(script_dir, gbl_cfg_rel_path)
-
     with open(gbl_cfg_abs_path) as json_file:
-        global_config = json.load(json_file)
-        return global_config
+        json_config = json.load(json_file)
+        return json_config
 
 
-def insert_asset_item_dynamoDB(asset_json_file, asset_id, region):
-    # TODO: DynamoDB -> RDS: Insert Data
-    dynamodb = boto3.resource("dynamodb", region_name=region)
-    global_config = getGlobalParams()
+def get_database(config):
+    db_secret = config['db_secret']
+    db_region = config['db_region']
+    conn = Connector(db_secret, db_region, autocommit=True)
+    return conn
 
+
+global_config = getGlobalParams()
+db = get_database(global_config)
+
+
+def insert_asset_item_rds(asset_json_file, asset_id, region):
+    """
+
+    :param asset_json_file:
+    :param asset_id:
+    :param region:
+    :return:
+    """
     with open(asset_json_file) as json_file:
         asset_config = json.load(json_file)
-
     asset_config.update({"asset_id": asset_id})
     item = json.dumps(asset_config)
-
-    asset_table = dynamodb.Table(
-        "{}.data_asset".format(global_config["fm_prefix"])
-    )
     jsonItem = json.loads(item)
-
+    fm_prefix = global_config['fm_prefix']
+    table = "data_asset"
     print(
-        "Inserting {} info in {}.data_asset table in {}".format(
-            asset_id, global_config["fm_prefix"], region
-        )
+        f"Inserting {asset_id} info in table in {fm_prefix}.{table}"
     )
-    response = asset_table.put_item(Item=jsonItem)
+    db.insert(table=table, data=jsonItem)
 
 
-def insert_asset_cols_dynamoDB(asset_col_json_file, asset_id, region):
-    # TODO: DynamoDB -> RDS: Insert Data
-    dynamodb = boto3.resource("dynamodb", region_name=region)
-    global_config = getGlobalParams()
+def insert_asset_cols_rds(asset_col_json_file, asset_id, region):
+    """
 
+    :param asset_col_json_file:
+    :param asset_id:
+    :param region:
+    :return:
+    """
     with open(asset_col_json_file) as json_file:
         asset_col_config = json.load(json_file)
-
+    fm_prefix = global_config['fm_prefix']
+    table = "data_asset_attributes"
     print(
-        "Inserting column info in {}.data_asset.{} table in {}".format(
-            global_config["fm_prefix"], asset_id, region
+        "Inserting column info for asset: {} in "
+        "{}.data_asset_attributes table in region {}".format(
+            asset_id, fm_prefix, region
         )
     )
-    for rows in asset_col_config["columns"]:
-        item = json.dumps(rows)
-        jsonItem = json.loads(item)
-        asset_col_table = dynamodb.Table(
-            "{}.data_asset.{}".format(
-                global_config["fm_prefix"], asset_id
-            )
-        )
-        response = asset_col_table.put_item(Item=jsonItem)
-
-
-def create_asset_catalog_table(asset_id, region):
-    # TODO: DynamoDB -> RDS: Create Table
-    dynamodb = boto3.resource("dynamodb", region_name=region)
-    global_config = getGlobalParams()
-
-    print(
-        "Creating the table {}.data_catalog.{} in {}".format(
-            global_config["fm_prefix"], str(asset_id), region
-        )
-    )
-    asset_detail_table = dynamodb.create_table(
-        TableName=global_config["fm_prefix"]
-        + ".data_catalog."
-        + str(asset_id),
-        KeySchema=[
-            {"AttributeName": "exec_id", "KeyType": "HASH"},
-        ],
-        AttributeDefinitions=[
-            {"AttributeName": "exec_id", "AttributeType": "S"},
-        ],
-        ProvisionedThroughput={
-            "ReadCapacityUnits": 1,
-            "WriteCapacityUnits": 1,
-        },
-    )
-
-
-def create_asset_detail_table(asset_id, region):
-    # TODO: DynamoDB -> RDS: Create Table
-    dynamodb = boto3.resource("dynamodb", region_name=region)
-    global_config = getGlobalParams()
-
-    print(
-        "Creating the table {}.data_asset.{} in {}".format(
-            global_config["fm_prefix"], str(asset_id), region
-        )
-    )
-    asset_detail_table = dynamodb.create_table(
-        TableName=global_config["fm_prefix"]
-        + ".data_asset."
-        + str(asset_id),
-        KeySchema=[
-            {"AttributeName": "col_id", "KeyType": "HASH"},
-            {"AttributeName": "col_nm", "KeyType": "RANGE"},
-        ],
-        AttributeDefinitions=[
-            {"AttributeName": "col_id", "AttributeType": "N"},
-            {"AttributeName": "col_nm", "AttributeType": "S"},
-        ],
-        ProvisionedThroughput={
-            "ReadCapacityUnits": 1,
-            "WriteCapacityUnits": 1,
-        },
-    )
+    data = asset_col_config["columns"]
+    db.insert_many(table, data)
 
 
 def create_src_s3_dir_str(asset_id, asset_json_file, region):
-    global_config = getGlobalParams()
+    # global_config = getGlobalParams()
     with open(asset_json_file) as json_file:
         asset_config = json.load(json_file)
 
@@ -177,7 +124,6 @@ def set_bucket_event_notification(asset_id, asset_json_file, region):
 
     :return:
     """
-    global_config = getGlobalParams()
     with open(asset_json_file) as json_file:
         asset_config = json.load(json_file)
 
@@ -251,3 +197,6 @@ def set_bucket_event_notification(asset_id, asset_json_file, region):
                 "TopicConfigurations": bucket_config
             },
         )
+
+
+db.close()

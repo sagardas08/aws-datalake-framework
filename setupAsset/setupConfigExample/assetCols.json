@@ -7,7 +7,7 @@
       "col_nm": "quality_of_faculty",
       "data_classification": "non-confidential",
       "data_type": "Integral",
-      "nullable": false,
+      "null_ind": false,
       "pk_ind": false,
       "req_tokenization": false,
       "tgt_col_nm": "quality_of_faculty"
@@ -18,7 +18,7 @@
       "col_nm": "publications",
       "data_classification": "non-confidential",
       "data_type": "Integral",
-      "nullable": false,
+      "null_ind": false,
       "pk_ind": false,
       "req_tokenization": false,
       "tgt_col_nm": "publications"
@@ -29,7 +29,7 @@
       "col_nm": "citations",
       "data_classification": "non-confidential",
       "data_type": "Integral",
-      "nullable": false,
+      "null_ind": false,
       "pk_ind": false,
       "req_tokenization": false,
       "tgt_col_nm": "citations"
@@ -40,7 +40,7 @@
       "col_nm": "country",
       "data_classification": "non-confidential",
       "data_type": "String",
-      "nullable": false,
+      "null_ind": false,
       "pk_ind": false,
       "req_tokenization": false,
       "tgt_col_nm": "country"
@@ -51,7 +51,7 @@
       "col_nm": "institution",
       "data_classification": "non-confidential",
       "data_type": "String",
-      "nullable": false,
+      "null_ind": false,
       "pk_ind": false,
       "req_tokenization": false,
       "tgt_col_nm": "institution"
@@ -62,7 +62,7 @@
       "col_nm": "year",
       "data_classification": "non-confidential",
       "data_type": "Integral",
-      "nullable": false,
+      "null_ind": false,
       "pk_ind": false,
       "req_tokenization": false,
       "tgt_col_nm": "year"
@@ -73,7 +73,7 @@
       "col_nm": "patents",
       "data_classification": "non-confidential",
       "data_type": "Integral",
-      "nullable": false,
+      "null_ind": false,
       "pk_ind": false,
       "req_tokenization": false,
       "tgt_col_nm": "patents"
@@ -84,7 +84,7 @@
       "col_nm": "influence",
       "data_classification": "non-confidential",
       "data_type": "Integral",
-      "nullable": false,
+      "null_ind": false,
       "pk_ind": false,
       "req_tokenization": false,
       "tgt_col_nm": "influence"
@@ -95,7 +95,7 @@
       "col_nm": "national_rank",
       "data_classification": "non-confidential",
       "data_type": "Integral",
-      "nullable": false,
+      "null_ind": false,
       "pk_ind": false,
       "req_tokenization": false,
       "tgt_col_nm": "national_rank"
@@ -106,7 +106,7 @@
       "col_nm": "score",
       "data_classification": "non-confidential",
       "data_type": "Numeric",
-      "nullable": false,
+      "null_ind": false,
       "pk_ind": false,
       "req_tokenization": false,
       "tgt_col_nm": "score"
@@ -117,7 +117,7 @@
       "col_nm": "alumni_employment",
       "data_classification": "non-confidential",
       "data_type": "Integral",
-      "nullable": false,
+      "null_ind": false,
       "pk_ind": false,
       "req_tokenization": false,
       "tgt_col_nm": "alumni_employment"
@@ -128,7 +128,7 @@
       "col_nm": "world_rank",
       "data_classification": "non-confidential",
       "data_type": "Integral",
-      "nullable": false,
+      "null_ind": false,
       "pk_ind": false,
       "req_tokenization": false,
       "tgt_col_nm": "world_rank"
@@ -139,7 +139,7 @@
       "col_nm": "quality_of_education",
       "data_classification": "non-confidential",
       "data_type": "Integral",
-      "nullable": false,
+      "null_ind": false,
       "pk_ind": false,
       "req_tokenization": false,
       "tgt_col_nm": "quality_of_education"
@@ -150,7 +150,7 @@
       "col_nm": "broad_impact",
       "data_classification": "non-confidential",
       "data_type": "Integral",
-      "nullable": false,
+      "null_ind": false,
       "pk_ind": false,
       "req_tokenization": false,
       "tgt_col_nm": "broad_impact"
@@ -161,7 +161,7 @@
       "col_nm": "identifier",
       "data_classification": "non-confidential",
       "data_type": "Integral",
-      "nullable": false,
+      "null_ind": false,
       "pk_ind": true,
       "req_tokenization": false,
       "tgt_col_nm": "unique_identifier"
