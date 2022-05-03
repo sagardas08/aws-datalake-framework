@@ -96,6 +96,7 @@ def remove_asset_s3(asset):
 
 def remove_asset_col_details(asset):
     # TODO: DynamoDB -> RDS: Delete Table
+    # Delete details of this asset from dl_fmwrk.data_asset_attributes
     """
     Remove the table fm_prefix.data_asset.asset_id from dynamodb
     """
@@ -113,6 +114,7 @@ def remove_asset_col_details(asset):
 
 def remove_asset_catalog_details(asset):
     # TODO: DynamoDB -> RDS: Delete Table
+    # delete asset from dl_fmwrk.data_asset_catalogs
     """
     Remove the table fm_prefix.data_catalog.asset_id from dynamodb
     :param asset:
