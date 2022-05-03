@@ -267,7 +267,7 @@ class Connector:
         self._execute(sql)
         self.conn.commit()
 
-    def retrieve(self, table, cols, where, order=None, limit=None):
+    def retrieve(self, table, cols, where=None, order=None, limit=None):
         """
         Retrieve the data from a table for some cols / all cols
         :return: list of tuples
@@ -287,7 +287,7 @@ class Connector:
         cursor.close()
         return rows[len(rows) - limit if limit else 0:]
 
-    def retrieve_dict(self, table, cols, where, order=None, limit=None):
+    def retrieve_dict(self, table, cols, where=None, order=None, limit=None):
         """
         Retrieve a table / subset of tables in a JSON array format
         :return: list of dict
