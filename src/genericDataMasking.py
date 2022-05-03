@@ -4,6 +4,7 @@ from awsglue.utils import getResolvedOptions
 from utils.data_asset import DataAsset
 from utils.comUtils import *
 from utils.capeprivacyUtils import *
+from connector.pg_connect import Connector
 
 
 def get_global_config():
@@ -18,10 +19,16 @@ def get_global_config():
     return config
 
 
+# Get the arguments
 args = getResolvedOptions(sys.argv, ["source_path", "source_id", "asset_id", "exec_id"])
 global_config = get_global_config()
+# Record the start time of the job
 start_time = time.time()
-asset = DataAsset(args, global_config, run_identifier="data-masking")
+region = boto3.session.Session().region_name
+# Create connection object
+conn = Connector("postgres_dev", region)
+# Create object to store data asset info
+asset = DataAsset(args, global_config, run_identifier="data-masking", conn=conn)
 # Creating spark Session object
 spark = get_spark_for_masking(asset.logger)
 try:
@@ -35,9 +42,9 @@ try:
         asset.logger,
     )
     # Update the data catalog dynamoDB table to "In-Progress" for easy monitoring
-    asset.update_data_catalog(data_masking="In-Progress")
+    asset.update_data_catalog(conn, data_masking="In-Progress")
     # Getting data asset table dedicated for a specific asset which specifies if masking is required or not
-    metadata = asset.get_asset_metadata()
+    metadata = asset.get_asset_metadata(conn)
     # Getting the masking key from AWS Secrets Manager
     key = get_secret(asset.secret_name, asset.region, asset.logger)
     # Function to mask data of sensitive columns
@@ -55,14 +62,17 @@ try:
         asset.logger,
     )
     # Update data catalog table to "Completed" if the masking is successful
-    asset.update_data_catalog(data_masking="Completed")
+    asset.update_data_catalog(conn, data_masking="Completed")
 except Exception as e:
     # Update data catalog table to "Failed" in case of exceptions
-    asset.update_data_catalog(data_masking="Failed")
+    asset.update_data_catalog(conn, data_masking="Failed")
     asset.logger.write(message=str(e))
 
 end_time = time.time()
 asset.logger.write(message=f"Time Taken = {round(end_time - start_time, 2)} seconds")
+#Write logs to S3
 asset.logger.write_logs_to_s3()
+#Close connection
+conn.close()
 # Stop the spark session
 stop_spark(spark)
