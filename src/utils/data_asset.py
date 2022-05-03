@@ -1,19 +1,18 @@
 import boto3
-from boto3.dynamodb.conditions import Key
-from botocore.exceptions import ClientError
-
-from .comUtils import get_metadata, dynamodbJsonToDict
+from .comUtils import get_metadata
 from .dqUtils import generate_code
 from .logger import Logger
 from .validateSchema import validate_schema
 
 
 class DataAsset:
-    def __init__(self, args, config, run_identifier):
+    def __init__(self, args, config, run_identifier, conn):
         """
         Defines a Data Asset and its properties
         :param args: Run time arguments gathered from Step Function
         :param config: The Global config file
+        :param run_identifier: To identify which job is running at present
+        :param conn : DB connection object
         """
         self.asset_metadata = None
         self.asset_id = args["asset_id"]
@@ -24,9 +23,7 @@ class DataAsset:
         self.region = boto3.session.Session().region_name
         self.log_type = config["log_type"]
         self.secret_name = config["secret_name"]
-        self.source_file_path = self.source_path.replace(
-            "s3://", "s3a://"
-        )
+        self.source_file_path = self.source_path.replace("s3://", "s3a://")
         self.logger = Logger(
             log_type=self.log_type,
             log_name=self.exec_id,
@@ -35,40 +32,28 @@ class DataAsset:
             region=self.region,
             run_identifier=run_identifier,
         )
-        self.dynamo_db = boto3.resource(
-            "dynamodb", region_name=self.region
-        )
-        items = self.get_data_asset_info()
+        items = self.get_data_asset_info(conn)
         self.asset_name = items["asset_nm"]
         self.asset_file_type = items["file_type"]
         self.asset_file_delim = items["file_delim"]
         self.asset_file_header = items["file_header"]
         self.target_id = items["target_id"]
-        self.encryption = items["req_encryption"]
-        self.metadata_table = (
-            f"{self.fm_prefix}.data_asset.{self.asset_id}"
-        )
-        self.data_catalog = (
-            f"{self.fm_prefix}.data_catalog.{self.asset_id}"
-        )
+        self.encryption = items["file_encryption_ind"]
 
-    def get_data_asset_info(self):
-        # TODO: DynamoDB -> RDS: Retrieve Data
-        table = f"{self.fm_prefix}.data_asset"
-        self.logger.write(message=f"Getting asset info from {table}")
-        asset_info = self.dynamo_db.Table(table)
-        asset_info_items = asset_info.query(
-            KeyConditionExpression=Key("asset_id").eq(
-                int(self.asset_id)
-            )
+    def get_data_asset_info(self, conn):
+        """
+        :param conn: DB connection object
+        :return: Data asset info as dictionary
+        """
+        asset_dict = conn.retrieve_dict(
+            "data_asset", cols="all", where=("asset_id=%s", [self.asset_id])
         )
-        items = dynamodbJsonToDict(asset_info_items)
-        return items
+        return asset_dict[0]
 
     def get_results_path(self):
         """
         Path for storing the DQ results
-        :return:
+        :return: s3 uri
         """
         return (
             self.source_file_path.split(self.asset_id)[0]
@@ -81,53 +66,48 @@ class DataAsset:
     def get_masking_path(self):
         """
         Path for storing the results of Data Masking
-        :return:
+        :return: s3 uri
         """
         return (
-            self.source_file_path.split(self.asset_id)[0]
-            + f"{self.asset_id}/masked/"
+            self.source_file_path.split(self.asset_id)[0] + f"{self.asset_id}/masked/"
         )
 
-    def get_asset_metadata(self):
+    def get_asset_metadata(self, conn):
         """
         Gets the required metadata for an asset
         :return:
         """
-        return get_metadata(
-            self.metadata_table, self.region, logger=self.logger
-        )
+        return get_metadata(conn, self.asset_id, logger=self.logger)
 
-    def adv_dq_required(self):
+    def adv_dq_required(self, conn):
         """
         The function checks if advanced DQ is required for a particular asset or not
-        :return:
+        :param: DB connection object
+        :return: Boolean
         """
-        adv_dq_table = f"{self.fm_prefix}.adv_dq.{self.asset_id}"
-        table = self.dynamo_db.Table(adv_dq_table)
-        required = None
-        try:
-            if table.table_status in ["CREATING", "UPDATING", "ACTIVE"]:
-                required = True
-        except ClientError:
-            required = False
-        return required
+        dq_rules = conn.retrieve(
+            "adv_dq_rules", cols="all", where=("asset_id=%s", [self.asset_id])
+        )
+        if len(dq_rules) == 0:
+            return False
+        else:
+            return True
 
-    def generate_dq_code(self):
+    def generate_dq_code(self, conn):
         """
         Generate the Dynamic DQ code
-        :return:
+        :param :DB connection object
+        :return: Generated code
         """
-        metadata = self.get_asset_metadata()
-        adv_dq = self.adv_dq_required()
+        metadata = self.get_asset_metadata(conn)
+        adv_dq = self.adv_dq_required(conn)
         if adv_dq:
-            adv_dq_table = f"{self.fm_prefix}.adv_dq.{self.asset_id}"
-            table = self.dynamo_db.Table(adv_dq_table)
-            response = table.scan()
-            if len(response["Items"]):
+            dq_rules = conn.retrieve_dict(
+                "adv_dq_rules", cols="dq_rule", where=("asset_id=%s", [self.asset_id])
+            )
+            if len(dq_rules):
                 # The table exists and contains the adv dq
-                check_list = [
-                    "." + i["dq_rule"] for i in response["Items"]
-                ]
+                check_list = ["." + i["dq_rule"] for i in dq_rules]
                 code = generate_code(
                     metadata, logger=self.logger, adv_dq_info=check_list
                 )
@@ -141,17 +121,17 @@ class DataAsset:
 
     def update_data_catalog(
         self,
+        conn,
         dq_validation=None,
         data_masking=None,
         data_standardization=None,
     ):
-        # TODO: DynamoDB -> RDS: Update Data
         """
         Updates the data catalog in DynamoDB
         """
-        table = self.dynamo_db.Table(self.data_catalog)
-        response = table.get_item(Key={"exec_id": self.exec_id})
-        item = response["Item"]
+        table_name = "data_asset_catalogs"
+        where_clause = ("exec_id=%s", [self.exec_id])
+        item = {}
         if dq_validation:
             self.logger.write(
                 message=f"updating data catalog entry dq_validation with {dq_validation}"
@@ -167,7 +147,7 @@ class DataAsset:
                 message=f"updating data catalog entry data_standardization with {data_standardization}"
             )
             item["data_standardization"] = data_standardization
-        table.put_item(Item=item)
+        conn.update(table=table_name, data=item, where=where_clause)
 
     def validate_schema(self, source_df):
         """
@@ -182,7 +162,5 @@ class DataAsset:
             self.region,
             logger=self.logger,
         )
-        self.logger.write(
-            message=f"Schema Validation = {schema_validation}"
-        )
+        self.logger.write(message=f"Schema Validation = {schema_validation}")
         return schema_validation
