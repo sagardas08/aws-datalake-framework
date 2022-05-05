@@ -5,7 +5,7 @@ from awsglue.utils import getResolvedOptions
 from utils.comUtils import *
 from utils.dqUtils import *
 from utils.data_asset import DataAsset
-from connector.pg_connect import Connector
+from utils.pg_connect import Connector
 
 
 def get_global_config():
@@ -38,8 +38,9 @@ start_time = time.time()
 # Get the arguments
 args = getResolvedOptions(sys.argv, ["source_path", "source_id", "asset_id", "exec_id"])
 global_config = get_global_config()
-region = boto3.session.Session().region_name
-conn = Connector("postgres_dev", region)
+db_secret = global_config['db_secret']
+db_region = global_config['db_region']
+conn = Connector(db_secret, db_region)
 # Creating an object to house imp info about the asset in one place
 asset = DataAsset(args, global_config, run_identifier="data-masking", conn=conn)
 # Creation of source dataframe using spark and asset properties
@@ -54,7 +55,7 @@ source_df = create_spark_df(
 )
 # validating the schema of the asset using the asset_info table
 # if the schema is validated, continue with the DQ else stop the process
-if asset.validate_schema(source_df):
+if asset.validate_schema(conn, source_df):
     try:
         # update the data catalog that DQ is in progress
         asset.update_data_catalog(conn, dq_validation="In-Progress")

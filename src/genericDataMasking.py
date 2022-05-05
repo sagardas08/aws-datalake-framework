@@ -4,7 +4,7 @@ from awsglue.utils import getResolvedOptions
 from utils.data_asset import DataAsset
 from utils.comUtils import *
 from utils.capeprivacyUtils import *
-from connector.pg_connect import Connector
+from utils.pg_connect import Connector
 
 
 def get_global_config():

@@ -9,11 +9,11 @@ from .logger import log
 
 
 PRIMARY_CHECKS = {
-        "null": ".isComplete",
-        "pk": ".isUnique",
-        "data_type": ".hasDataType",
-        "max_length": ".hasMaxLength",
-    }
+    "null": ".isComplete",
+    "pk": ".isUnique",
+    "data_type": ".hasDataType",
+    "max_length": ".hasMaxLength",
+}
 
 
 def run_constraint_suggestion(spark, df):

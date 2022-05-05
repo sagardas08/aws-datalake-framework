@@ -56,8 +56,8 @@ class DataAsset:
         :return: s3 uri
         """
         return (
-                self.source_file_path.split(self.asset_id)[0]
-                + f"{self.asset_id}/logs/{self.exec_id}/dq_results"
+            self.source_file_path.split(self.asset_id)[0]
+            + f"{self.asset_id}/logs/{self.exec_id}/dq_results"
         )
 
     def get_error_path(self):
@@ -69,7 +69,7 @@ class DataAsset:
         :return: s3 uri
         """
         return (
-                self.source_file_path.split(self.asset_id)[0] + f"{self.asset_id}/masked/"
+            self.source_file_path.split(self.asset_id)[0] + f"{self.asset_id}/masked/"
         )
 
     def get_asset_metadata(self, conn):
@@ -120,11 +120,11 @@ class DataAsset:
         return code
 
     def update_data_catalog(
-            self,
-            conn,
-            dq_validation=None,
-            data_masking=None,
-            data_standardization=None,
+        self,
+        conn,
+        dq_validation=None,
+        data_masking=None,
+        data_standardization=None,
     ):
         """
         Updates the data catalog in DynamoDB
@@ -154,8 +154,6 @@ class DataAsset:
         Method to return if an asset's schema is validated
         :return: Bool
         """
-        schema_validation = validate_schema(
-            self, source_df, conn, logger=self.logger
-        )
+        schema_validation = validate_schema(self, source_df, conn, logger=self.logger)
         self.logger.write(message=f"Schema Validation = {schema_validation}")
         return schema_validation

@@ -10,7 +10,7 @@ def get_schema_details(db, table, asset_id):
     """
     # TODO: DynamoDB -> RDS: Retrieve Data
     response = db.retrieve_dict(
-        table, cols=['col_id', 'col_nm'], where=('asset_id=%s', [asset_id])
+        table, cols=["col_id", "col_nm"], where=("asset_id=%s", [asset_id])
     )
     print(response)
     return response
@@ -70,9 +70,7 @@ def match_length(actual, expected):
 
 
 @log
-def validate_schema(
-        asset, df, conn, logger=None
-):
+def validate_schema(asset, df, conn, logger=None):
     """8
     Target Function to enforce schema validation
     :return:

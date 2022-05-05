@@ -8,7 +8,7 @@ from utils.data_asset import DataAsset
 from utils.comUtils import *
 from utils.standardizationUtils import *
 from utils.athena_ddl import get_or_create_db, get_or_create_table, manage_partition
-from connector.pg_connect import Connector
+from utils.pg_connect import Connector
 
 
 def get_global_config():
@@ -26,16 +26,21 @@ def get_global_config():
 # Get the arguments
 args = getResolvedOptions(sys.argv, ["source_path", "source_id", "asset_id", "exec_id"])
 global_config = get_global_config()
+
 # Record the start time of the job
 start_time = time.time()
+
 # Creating a spark session object
 spark = sql.SparkSession.builder.getOrCreate()
+
 # Creating a job
 job = Job(GlueContext(SparkContext.getOrCreate()))
 job.init(args["JOB_NAME"], args)
 region = boto3.session.Session().region_name
+
 # Create connection object
 conn = Connector("postgres_dev", region)
+
 # Create object to store data asset info
 asset = DataAsset(args, global_config, run_identifier="data-masking", conn=conn)
 try:
@@ -52,12 +57,16 @@ try:
     asset.update_data_catalog(conn, data_standardization="In-Progress")
     # Getting data asset table dedicated for a specific asset which specifies if masking is required or not
     metadata = asset.get_asset_metadata(conn)
+
     # Function to standardize the data to a user required format
     result = run_data_standardization(source_df, metadata, asset.logger)
+
     # Getting data from target system table
     target_system_info = get_target_system_info(conn, asset.target_id, asset.logger)
+
     # Getting the timestamp identifier from the source path
     timestamp = get_timestamp(asset.source_path)
+
     # Getting the standardization path with the help of info from target system
     target_path = get_standardization_path(
         target_system_info, asset.asset_id, timestamp, asset.logger
@@ -104,11 +113,15 @@ except Exception as e:
 end_time = time.time()
 total_time_taken = float("{0:.2f}".format(end_time - start_time))
 asset.logger.write(message=f"Time Taken = {total_time_taken} seconds")
+
 # Write logs to S3
 asset.logger.write_logs_to_s3()
-#Close connection
+
+# Close connection
 conn.close()
+
 # Stop the spark session
 stop_spark(spark)
+
 # Committing the job
 job.commit()
