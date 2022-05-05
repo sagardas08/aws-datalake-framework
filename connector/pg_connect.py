@@ -18,7 +18,7 @@ class Connector:
         """
         if secret is not None and region is not None:
             self.secret_id = secret
-            self.session = boto3.session.Session()
+            self.session = boto3.session.Session(region_name=region)
             self.secrets_client = self.session.client(
                 service_name="secretsmanager",
                 region_name=region,
