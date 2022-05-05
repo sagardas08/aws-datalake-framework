@@ -13,10 +13,18 @@ from utils.comUtils import getGlobalParams
 from utils.comUtils import insert_asset_cols_rds
 from utils.comUtils import set_bucket_event_notification
 from utils.comUtils import create_src_s3_dir_str
+from connector import Connector
 
 
 def generate_asset_id(n):
     return int(f'{randrange(1, 10**n):03}')
+
+
+def get_database(config):
+    db_secret = config['db_secret']
+    db_region = config['db_region']
+    conn = Connector(db_secret, db_region, autocommit=True)
+    return conn
 
 
 def main():
@@ -26,38 +34,44 @@ def main():
     asset_json_file = sys.argv[1]
     asset_col_json_file = sys.argv[2]
     global_config = getGlobalParams()
-    asset_id = generate_asset_id(10)
+    asset_id = generate_asset_id(6)
     print("Insert asset item")
-    insert_asset_item_rds(
-        asset_json_file, asset_id, global_config["primary_region"]
-    )
-    print("Insert asset columns")
-    insert_asset_cols_rds(
-        asset_col_json_file, asset_id, global_config["primary_region"]
-    )
-    """
-    insert_asset_item_rds(
-        asset_json_file, asset_id, global_config["secondary_region"]
-    )
-    insert_asset_cols_rds(
-        asset_col_json_file, asset_id, global_config["secondary_region"]
-    )
-    """
-    print("Create s3 directory structure")
-    create_src_s3_dir_str(
-        asset_id, asset_json_file, global_config["primary_region"]
-    )
-    create_src_s3_dir_str(
-        asset_id, asset_json_file, global_config["secondary_region"]
-    )
+    db = get_database(global_config)
+    try:
+        insert_asset_item_rds(
+            db, asset_json_file, asset_id, global_config["primary_region"]
+        )
+        print("Insert asset columns")
+        insert_asset_cols_rds(
+            db, asset_col_json_file, asset_id, global_config["primary_region"]
+        )
+        """
+        insert_asset_item_rds(
+            asset_json_file, asset_id, global_config["secondary_region"]
+        )
+        insert_asset_cols_rds(
+            asset_col_json_file, asset_id, global_config["secondary_region"]
+        )
+        """
+        print("Create s3 directory structure")
+        create_src_s3_dir_str(
+            asset_id, asset_json_file, global_config["primary_region"]
+        )
+        create_src_s3_dir_str(
+            asset_id, asset_json_file, global_config["secondary_region"]
+        )
 
-    print("Add Bucket Notification")
-    set_bucket_event_notification(
-        asset_id, asset_json_file, global_config["primary_region"]
-    )
-    set_bucket_event_notification(
-        asset_id, asset_json_file, global_config["secondary_region"]
-    )
+        print("Add Bucket Notification")
+        set_bucket_event_notification(
+            asset_id, asset_json_file, global_config["primary_region"]
+        )
+        set_bucket_event_notification(
+            asset_id, asset_json_file, global_config["secondary_region"]
+        )
+    except Exception as e:
+        print(e)
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":

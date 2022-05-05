@@ -16,20 +16,13 @@ def getGlobalParams():
         return json_config
 
 
-def get_database(config):
-    db_secret = config['db_secret']
-    db_region = config['db_region']
-    conn = Connector(db_secret, db_region, autocommit=True)
-    return conn
-
-
 global_config = getGlobalParams()
-db = get_database(global_config)
 
 
-def insert_asset_item_rds(asset_json_file, asset_id, region):
+def insert_asset_item_rds(db, asset_json_file, asset_id, region):
     """
 
+    :param db:
     :param asset_json_file:
     :param asset_id:
     :param region:
@@ -48,9 +41,10 @@ def insert_asset_item_rds(asset_json_file, asset_id, region):
     db.insert(table=table, data=jsonItem)
 
 
-def insert_asset_cols_rds(asset_col_json_file, asset_id, region):
+def insert_asset_cols_rds(db, asset_col_json_file, asset_id, region):
     """
 
+    :param db:
     :param asset_col_json_file:
     :param asset_id:
     :param region:
@@ -67,6 +61,9 @@ def insert_asset_cols_rds(asset_col_json_file, asset_id, region):
         )
     )
     data = asset_col_config["columns"]
+    if data[0]['asset_id'] != asset_id:
+        for i in data:
+            i['asset_id'] = asset_id
     db.insert_many(table, data)
 
 
@@ -76,14 +73,8 @@ def create_src_s3_dir_str(asset_id, asset_json_file, region):
         asset_config = json.load(json_file)
 
     src_sys_id = asset_config["src_sys_id"]
-    bucket_name = (
-        global_config["fm_prefix"]
-        + "-"
-        + str(src_sys_id)
-        + "-"
-        + region
-    )
-
+    # bucket_name = global_config["fm_prefix"] + "-" + str(src_sys_id) + "-"+ region
+    bucket_name = f"{global_config['fm_prefix']}-{str(src_sys_id)}-{region}"
     print(
         "Creating directory structure in {} bucket".format(bucket_name)
     )
@@ -198,5 +189,3 @@ def set_bucket_event_notification(asset_id, asset_json_file, region):
             },
         )
 
-
-db.close()

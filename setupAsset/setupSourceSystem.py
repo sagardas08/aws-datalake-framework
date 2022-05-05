@@ -15,11 +15,16 @@ import decimal
 import time
 import sys
 import os
-from random import random
+from random import random, randrange
 from utils.comUtils import getGlobalParams
 from connector.pg_connect import Connector
 
-src_sys_id = int(str(random()).split(".")[1])
+
+def generate_src_sys_id(n):
+    return int(f'{randrange(1, 10**n):03}')
+
+
+src_sys_id = generate_src_sys_id(6)
 global_config = getGlobalParams()
 print(src_sys_id)
 
