@@ -8,7 +8,7 @@ from utils.data_asset import DataAsset
 from utils.comUtils import *
 from utils.standardizationUtils import *
 from utils.athena_ddl import get_or_create_db, get_or_create_table, manage_partition
-from utils.pg_connect import Connector
+from connector import Connector
 
 
 def get_global_config():
@@ -36,10 +36,9 @@ spark = sql.SparkSession.builder.getOrCreate()
 # Creating a job
 job = Job(GlueContext(SparkContext.getOrCreate()))
 job.init(args["JOB_NAME"], args)
-region = boto3.session.Session().region_name
-
-# Create connection object
-conn = Connector("postgres_dev", region)
+db_secret = global_config['db_secret']
+db_region = global_config['db_region']
+conn = Connector(db_secret, db_region, autocommit=True)
 
 # Create object to store data asset info
 asset = DataAsset(args, global_config, run_identifier="data-masking", conn=conn)

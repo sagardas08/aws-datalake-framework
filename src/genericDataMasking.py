@@ -1,10 +1,11 @@
 import sys
 import time
 from awsglue.utils import getResolvedOptions
+
 from utils.data_asset import DataAsset
 from utils.comUtils import *
 from utils.capeprivacyUtils import *
-from utils.pg_connect import Connector
+from connector import Connector
 
 
 def get_global_config():
@@ -26,7 +27,9 @@ global_config = get_global_config()
 start_time = time.time()
 region = boto3.session.Session().region_name
 # Create connection object
-conn = Connector("postgres_dev", region)
+db_secret = global_config['db_secret']
+db_region = global_config['db_region']
+conn = Connector(db_secret, db_region, autocommit=True)
 # Create object to store data asset info
 asset = DataAsset(args, global_config, run_identifier="data-masking", conn=conn)
 # Creating spark Session object

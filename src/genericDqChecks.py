@@ -5,7 +5,7 @@ from awsglue.utils import getResolvedOptions
 from utils.comUtils import *
 from utils.dqUtils import *
 from utils.data_asset import DataAsset
-from utils.pg_connect import Connector
+from connector import Connector
 
 
 def get_global_config():
@@ -20,7 +20,7 @@ def get_global_config():
     return config
 
 
-def stop():
+def stop(conn):
     """
     Method to stop the sparkSession and write logs to S3
     :return: None
@@ -31,6 +31,7 @@ def stop():
         message=f"Time Taken = {round(end_time - start_time, 2)} seconds"
     )
     asset.logger.write_logs_to_s3()
+    conn.close()
 
 
 # Record the start time of the job
@@ -40,7 +41,7 @@ args = getResolvedOptions(sys.argv, ["source_path", "source_id", "asset_id", "ex
 global_config = get_global_config()
 db_secret = global_config['db_secret']
 db_region = global_config['db_region']
-conn = Connector(db_secret, db_region)
+conn = Connector(db_secret, db_region, autocommit=True)
 # Creating an object to house imp info about the asset in one place
 asset = DataAsset(args, global_config, run_identifier="data-masking", conn=conn)
 # Creation of source dataframe using spark and asset properties
@@ -85,7 +86,7 @@ if asset.validate_schema(conn, source_df):
         asset.logger.write(message=str(e))
         asset.update_data_catalog(conn, dq_validation="Failed")
         asset.logger.write_logs_to_s3()
-    stop()
+    stop(conn)
 else:
     # In case of invalid schema update the status to failed
     asset.update_data_catalog(conn, dq_validation="Failed")
@@ -95,5 +96,5 @@ else:
         schema_validation=False,
         logger=asset.logger,
     )
-    stop()
+    stop(conn)
     raise Exception("Halting the execution due to schema irregularities in the dataset")
