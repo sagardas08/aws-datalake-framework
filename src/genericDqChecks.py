@@ -20,7 +20,7 @@ def get_global_config():
     return config
 
 
-def stop(conn):
+def stop(db):
     """
     Method to stop the sparkSession and write logs to S3
     :return: None
@@ -31,7 +31,7 @@ def stop(conn):
         message=f"Time Taken = {round(end_time - start_time, 2)} seconds"
     )
     asset.logger.write_logs_to_s3()
-    conn.close()
+    db.close()
 
 
 # Record the start time of the job
