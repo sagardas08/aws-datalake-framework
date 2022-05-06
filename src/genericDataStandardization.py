@@ -41,7 +41,7 @@ db_region = global_config['db_region']
 conn = Connector(db_secret, db_region, autocommit=True)
 
 # Create object to store data asset info
-asset = DataAsset(args, global_config, run_identifier="data-quality", conn=conn)
+asset = DataAsset(args, global_config, run_identifier="data-standardization", conn=conn)
 try:
     # Creating spark dataframe from input file.Supported:CSV,Parquet,JSON,ORC
     source_df = create_spark_df(
