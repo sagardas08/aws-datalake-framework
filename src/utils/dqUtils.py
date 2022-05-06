@@ -92,9 +92,10 @@ def generate_code(responses, logger=None, adv_dq_info=None):
     else:
         check_list = list()
     for ob in responses:
+        print(ob)
         column = ob["col_nm"]
         # Null check
-        if ob["nullable"]:
+        if ob["null_ind"]:
             null_check = build_constraint(column, None, "null")
             check_list.append(null_check)
         # Primary key check
