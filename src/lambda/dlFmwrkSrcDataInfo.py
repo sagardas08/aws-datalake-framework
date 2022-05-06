@@ -45,8 +45,8 @@ def lambda_handler(event, context):
     # initial record is inserted in the data catalog table
     insert_data = {
         "exec_id": exec_id,
-        "src_sys_id": source_id,
-        "asset_id": asset_id,
+        "src_sys_id": int(source_id),
+        "asset_id": int(asset_id),
         "dq_validation": "not started",
         "data_standardization": "not started",
         "data_masking": "not started",
