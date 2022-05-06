@@ -4,15 +4,15 @@ import boto3
 from .logger import log
 
 
-def get_schema_details(table, region):
+def get_schema_details(db, table, asset_id):
     """
     Get the details of schema from DynamoDB
     """
     # TODO: DynamoDB -> RDS: Retrieve Data
-    dct = dict()
-    response_list = list()
-    client = boto3.client("dynamodb", region_name=region)
-    response = client.scan(TableName=table)["Items"]
+    response = db.retrieve_dict(
+        table, cols=["col_id", "col_nm"], where=("asset_id=%s", [asset_id])
+    )
+    print(response)
     return response
 
 
@@ -24,8 +24,8 @@ def order_columns(items):
     """
     schema_dict = dict()
     for item in items:
-        col_id = item["col_id"]["N"]
-        col_name = item["col_nm"]["S"]
+        col_id = item["col_id"]
+        col_name = item["col_nm"]
         schema_dict[col_name] = int(col_id)
     # sorting on the basis of numeric col_id
     columns = sorted(schema_dict, key=schema_dict.get)
@@ -70,22 +70,20 @@ def match_length(actual, expected):
 
 
 @log
-def validate_schema(
-    asset_file_type,
-    asset_file_header,
-    df,
-    metadata_table,
-    region,
-    logger=None,
-):
-    """
+def validate_schema(asset, df, conn, logger=None):
+    """8
     Target Function to enforce schema validation
     :return:
     """
     # get the list of cols
     df_cols = df.columns
+    metadata_table = "data_asset_attributes"
+    asset_id = asset.asset_id
+    region = asset.region
+    asset_file_type = asset.asset_file_type
+    asset_file_header = asset.asset_file_header
     # get the details of the schema from the metadata
-    schema_details = get_schema_details(metadata_table, region)
+    schema_details = get_schema_details(conn, metadata_table, asset_id)
     # order the columns as per their col_id
     columns = order_columns(schema_details)
     actual_cols = [i.lower() for i in df_cols]
@@ -104,5 +102,5 @@ def validate_schema(
             if len(diff) > 0:
                 print("The following columns are not matching: ")
                 for k, v in diff.items():
-                    print(f"Source Col Name: {k} --- Expected: {v}")
+                    print(f"Source Col Name: {k} <---> Expected: {v}")
     return result

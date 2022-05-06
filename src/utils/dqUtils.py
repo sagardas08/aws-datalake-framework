@@ -9,11 +9,11 @@ from .logger import log
 
 
 PRIMARY_CHECKS = {
-        "null": ".isComplete",
-        "pk": ".isUnique",
-        "data_type": ".hasDataType",
-        "max_length": ".hasMaxLength",
-    }
+    "null": ".isComplete",
+    "pk": ".isUnique",
+    "data_type": ".hasDataType",
+    "max_length": ".hasMaxLength",
+}
 
 
 def run_constraint_suggestion(spark, df):
@@ -94,7 +94,7 @@ def generate_code(responses, logger=None, adv_dq_info=None):
     for ob in responses:
         column = ob["col_nm"]
         # Null check
-        if ob["nullable"]:
+        if ob["null_ind"]:
             null_check = build_constraint(column, None, "null")
             check_list.append(null_check)
         # Primary key check

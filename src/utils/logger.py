@@ -114,9 +114,7 @@ class Logger:
             s3 = boto3.resource("s3", region_name=self.region)
             content = self.string_object.getvalue()
             try:
-                s3.Object(self.log_bucket, self.file_name).put(
-                    Body=content
-                )
+                s3.Object(self.log_bucket, self.file_name).put(Body=content)
             except Exception as e:
                 raise e
 
@@ -147,13 +145,9 @@ def log(function_to_decorate=None, *, param_logger=None):
             # getting the name of the function using in-built method
             func_name = func.__name__
             # extract the function signature (the variables which are passed to a func)
-            args_repr = [
-                repr(arg) for arg in args if not isinstance(arg, Logger)
-            ]
+            args_repr = [repr(arg) for arg in args if not isinstance(arg, Logger)]
             kwargs_repr = [
-                f"{k}={v}"
-                for k, v in kwargs.items()
-                if not isinstance(v, Logger)
+                f"{k}={v}" for k, v in kwargs.items() if not isinstance(v, Logger)
             ]
             signature = ", ".join(args_repr + kwargs_repr)
             try:

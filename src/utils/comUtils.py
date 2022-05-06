@@ -3,7 +3,6 @@ import json
 import decimal
 from datetime import datetime, timedelta
 from io import StringIO
-from boto3.dynamodb.conditions import Key
 import boto3
 import pydeequ
 from botocore.exceptions import ClientError
@@ -22,6 +21,7 @@ def get_current_time():
 
 @log
 def update_data_catalog(
+    conn,
     table_name,
     exec_id,
     dq_validation=None,
@@ -29,39 +29,37 @@ def update_data_catalog(
     data_standardization=None,
     logger=None,
 ):
-    # TODO: DynamoDB -> RDS: Update Data
     # method to update the data catalog entry
     """
-    :param table_name:
-    :param exec_id:
-    :param dq_validation:
-    :param data_masking:
-    :param data_standardization:
-    :param logger:
-    :return:
+    :param conn: DB connection object
+    :param table_name: Name of the table
+    :param exec_id: ID of each execution
+    :param dq_validation: Status of dq_validation
+    :param data_masking: Status of data_masking
+    :param data_standardization: Status of data_standardization
+    :param logger: Logger object
+    :return: None
     """
-    table = boto3.resource("dynamodb").Table(table_name)
-    response = table.get_item(Key={"exec_id": exec_id})
-    item = response["Item"]
+    item = {}
     if dq_validation:
         item["dq_validation"] = dq_validation
     elif data_masking:
         item["data_masking"] = data_masking
     elif data_standardization:
         item["data_standardization"] = data_standardization
-    table.put_item(Item=item)
+    where_clause = ("exec_id=%s", [exec_id])
+    conn.update(table=table_name, data=item, where=where_clause)
 
 
 @log
 def get_spark(logger=None):
     """
     Utility method to return a spark Session object initialized with Pydeequ jars
+    :param logger: Logger object
     :return: Spark Session Object
     """
     spark = (
-        SparkSession.builder.config(
-            "spark.jars.packages", pydeequ.deequ_maven_coord
-        )
+        SparkSession.builder.config("spark.jars.packages", pydeequ.deequ_maven_coord)
         .config("spark.jars.excludes", pydeequ.f2j_maven_coord)
         .getOrCreate()
     )
@@ -91,13 +89,13 @@ def create_spark_df(
     # Generates a spark dataframe from the source file based
     # on the different file conditions as specified in the asset info
     """
-    :param spark:
-    :param source_file_path:
-    :param asset_file_type:
-    :param asset_file_delim:
-    :param asset_file_header:
-    :param logger:
-    :return:
+    :param spark: Spark session object
+    :param source_file_path: S3 uri
+    :param asset_file_type: Type of file eg.CSV,JSON
+    :param asset_file_delim: Delimiter eg.','
+    :param asset_file_header: Boolean
+    :param logger: Logger object
+    :return: Spark dataframe
     """
     source_df = None
     if asset_file_type == "csv" and asset_file_header == True:
@@ -108,9 +106,7 @@ def create_spark_df(
             inferSchema=True,
         )
     elif asset_file_type == "csv" and asset_file_header == False:
-        source_df = spark.read.csv(
-            path=source_file_path, sep=asset_file_delim
-        )
+        source_df = spark.read.csv(path=source_file_path, sep=asset_file_delim)
     elif asset_file_type == "parquet":
         source_df = spark.read.parquet(source_file_path)
     elif asset_file_type == "json":
@@ -124,63 +120,27 @@ def create_spark_df(
         print("Unable to read the data from the source")
 
 
-# Helper class to convert a DynamoDB item to JSON.
-class DecimalEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, decimal.Decimal):
-            return str(o)
-        if isinstance(o, set):  # <---resolving sets as lists
-            return list(o)
-        return super(DecimalEncoder, self).default(o)
-
-
-
-def convert_to_dict(response):
-    """
-    :param response:
-    :return:
-    """
-    converted_dict = dict()
-    for key, value in response["Item"].items():
-        x = list(value.values())
-        converted_dict[key] = x[0]
-    return converted_dict
-
-def dynamodbJsonToDict(dynamodbJson):
-    items = None
-    for i in dynamodbJson["Items"]:
-        items = json.dumps(i, cls=DecimalEncoder)
-    return json.loads(items)
-
-
-
 @log
-def get_metadata(table, region, logger=None):
-    # TODO: DynamoDB -> RDS: Retrieve Data
+def get_metadata(conn, asset_id, logger=None):
     """
-    Get the metadata from dynamoDB to find which checks to run for which columns
-    :param table: The DynamoDB table name
-    :param region: The AWS region for e.g. us-east-1
+    Get the metadata from DB to find which checks to run for which columns
+    :param conn: Connection object
+    :param asset_id: Asset ID
+    :param logger: Logger object
+    :return : Dictionary
     """
-    temp_dict = dict()
-    response_list = list()
-    client = boto3.client("dynamodb", region_name=region)
-    response = client.scan(TableName=table)["Items"]
-    for item in response:
-        for k, v in item.items():
-            temp_dict[k] = list(v.values())[0]
-        response_list.append(temp_dict)
-        temp_dict = dict()
-    return response_list
+    return conn.retrieve_dict(
+        "data_asset_attributes", cols="all", where=("asset_id=%s", [asset_id])
+    )
 
 
 @log
 def check_failure(dataframe, logger):
     # method to check if any of the constraint checks has failed
     """
-    :param dataframe:
-    :param logger:
-    :return:
+    :param dataframe: Spark dataframe
+    :param logger: logger object
+    :return: Boolean
     """
     # set the failure flag to false initially
     fail = False
@@ -191,9 +151,7 @@ def check_failure(dataframe, logger):
     # if there is a single / multiple failures, set the failure flag to true
     if num_fails >= 1:
         if logger:
-            logger.write(
-                message=f"Found {num_fails} Failure(s) in the source file."
-            )
+            logger.write(message=f"Found {num_fails} Failure(s) in the source file.")
         fail = True
     return fail
 
@@ -202,9 +160,9 @@ def check_failure(dataframe, logger):
 def move_file(path, logger=None):
     # utility method to move a file if a failure is encountered
     """
-    :param path:
-    :param logger:
-    :return:
+    :param path: Path of file
+    :param logger: Logger object
+    :return: None
     """
     # extracting the bucket name
     split_path = path.split("/")
@@ -225,9 +183,7 @@ def move_file(path, logger=None):
 
 
 @log
-def move_source_file(
-    path, dq_result=None, schema_validation=None, logger=None
-):
+def move_source_file(path, dq_result=None, schema_validation=None, logger=None):
     """
     main method to move a source file in case of invalid schema / dq failure
     """
@@ -266,28 +222,22 @@ def store_sparkdf_to_s3(
     :param asset_file_type: Type of the file that the dataframe should be written as
     :param asset_file_delim: The delimiter
     :param asset_file_header: The header true/false
-    :param logger:
+    :param logger: Logger object
     :return:
     """
     target_path = target_path.replace("s3://", "s3a://")
     timestamp = get_current_time()
     target_path = target_path + timestamp + "/"
     if asset_file_type == "csv":
-        dataframe.repartition(1).write.csv(
-            target_path, header=True, mode="overwrite"
-        )
+        dataframe.repartition(1).write.csv(target_path, header=True, mode="overwrite")
     if asset_file_type == "parquet":
         dataframe.repartition(1).write.parquet(
             target_path, header=True, mode="overwrite"
         )
     if asset_file_type == "json":
-        dataframe.repartition(1).write.json(
-            target_path, header=True, mode="overwrite"
-        )
+        dataframe.repartition(1).write.json(target_path, header=True, mode="overwrite")
     if asset_file_type == "orc":
-        dataframe.repartition(1).write.orc(
-            target_path, header=True, mode="overwrite"
-        )
+        dataframe.repartition(1).write.orc(target_path, header=True, mode="overwrite")
 
 
 @log
@@ -296,31 +246,24 @@ def get_secret(secret_nm, region_nm, logger=None):
     Utility function to get secret key from secrets manager for tokenizing in data masking
     :param secret_nm: The name of the secret key that is used for tokenization
     :param region_nm: The AWS region for e.g. us-east-1
-    :param:logger
-    :return:
+    :param logger:Logger object
+    :return: Key for data masking
     """
     secret_name = secret_nm
     region_name = region_nm
 
     # Create a Secrets Manager client
     session = boto3.session.Session()
-    client = session.client(
-        service_name="secretsmanager", region_name=region_name
-    )
+    client = session.client(service_name="secretsmanager", region_name=region_name)
 
     try:
-        get_secret_value_response = client.get_secret_value(
-            SecretId=secret_name
-        )
+        get_secret_value_response = client.get_secret_value(SecretId=secret_name)
     except ClientError as e:
         if e.response["Error"]["Code"] == "DecryptionFailureException":
             # Secrets Manager can't decrypt the protected secret text using the provided KMS key.
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
-        elif (
-            e.response["Error"]["Code"]
-            == "InternalServiceErrorException"
-        ):
+        elif e.response["Error"]["Code"] == "InternalServiceErrorException":
             # An error occurred on the server side.
             # Deal with the exception here, and/or rethrow at your discretion
             raise e
@@ -358,46 +301,37 @@ def get_timestamp(source_path):
     """
     Utility function to get timestamp from source path
     :param source_path: The s3 uri
-    :return:
+    :return: Timestamp as string
     """
     return source_path.split("/")[5]
 
 
 @log
-def get_target_system_info(fm_prefix, target_id, region, logger=None):
+def get_target_system_info(conn, target_id, logger=None):
     """
     Utility function to get the items from target system
-    :param fm_prefix: fm_prefix
+
+    :param conn: DB connection object
     :param target_id: The id of target
-    :param region: The AWS region for e.g. us-east-1
-    :param logger:
-    :return:
+    :param logger: Logger object
+    :return: Dictionary
     """
-    
-    # TODO: DynamoDB -> RDS: Retrieve Data
-    client = boto3.client('dynamodb', region_name=region)
-    response = client.get_item(
-        TableName=f"{fm_prefix}.target_system",
-        Key={
-            'tgt_sys_id': {'N': str(target_id)},
-            'bucket_name': {'S': f"{fm_prefix}-tgt-{target_id}-{region}"},
-        }
+    tgt_sys_dict = conn.retrieve_dict(
+        "target_system", cols="all", where=("target_id=%s", [target_id])
     )
-    target_items = convert_to_dict(response)
-    return target_items
+    logger.write(message="Attempting to get target system information")
+    return tgt_sys_dict[0]
 
 
 @log
-def get_standardization_path(
-    target_system_info, asset_id, timestamp, logger=None
-):
+def get_standardization_path(target_system_info, asset_id, timestamp, logger=None):
     """
     Utility function to get the path where the standardized file should be stored
     :param target_system_info: Dictionary containing target system info
     :param asset_id: Asset id
-    :param timestamp: the timestamp
-    :param logger: logger
-    :return:
+    :param timestamp: The timestamp
+    :param logger: logger object
+    :return: s3 uri
     """
     target_bucket_name = target_system_info["bucket_name"]
     target_subdomain = target_system_info["subdomain"]
@@ -409,7 +343,7 @@ def get_athena_path(target_system_info, asset_id):
     Utility function to get the path for the specified athena table
     :param target_system_info: Dictionary containing target system info
     :param asset_id: Asset id
-    :return:
+    :return: s3 uri
     """
     target_bucket_name = target_system_info["bucket_name"]
     target_subdomain = target_system_info["subdomain"]

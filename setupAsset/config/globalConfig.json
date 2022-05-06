@@ -3,5 +3,7 @@
   "fm_prefix": "dl-fmwrk",
   "fm_tgt_prefix": "dl-fmwrk-tgt",
   "primary_region": "us-east-1",
-  "secondary_region": "us-east-2"
+  "secondary_region": "us-east-2",
+  "db_secret": "postgres_dev",
+  "db_region": "us-east-2"
 }

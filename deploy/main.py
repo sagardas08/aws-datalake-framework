@@ -8,7 +8,6 @@ import boto3
 from deploy_s3 import fetch_latest_code, deploy_to_s3, remove_clone_dir
 from create_jobs import create_glue_jobs
 from deploy_lambda import create_lambda, lambda_function_exists
-from create_dynamodb_tables import create_dynamodb_tables
 from create_sfn import create_step_function
 from logger import Logger
 
@@ -18,8 +17,7 @@ ROLLBACK_STATES = {
     2: "Deploying the latest code to S3",
     3: "Creating the lambda function",
     4: "Initiating Glue Job creation",
-    5: "Creating Source System, Target System Tables on DynamoDB",
-    6: "Creating Step Function",
+    5: "Creating Step Function",
 }
 
 
@@ -102,21 +100,6 @@ class DeployPipeline:
         else:
             pass
 
-    def create_dynamodb_tables(self):
-        if not self.rollback:
-            self.update_state()
-            create_status = create_dynamodb_tables(
-                self.config, self.region
-            )
-            if not create_status:
-                self.initiate_rollback()
-            else:
-                deploy_logger.write(
-                    message="Deployed the Dynamo DB Tables"
-                )
-        else:
-            pass
-
     def create_step_function(self):
         if not self.rollback:
             self.update_state()
@@ -185,22 +168,6 @@ class DeployPipeline:
             deploy_logger.write(message=status)
             time.sleep(secs=5)
 
-    def _rollback_source_table_creation(self):
-        # TODO: DynamoDB -> RDS: Delete Table
-        client = boto3.client("dynamodb", region_name=self.region)
-        tables = (
-            f"{self.fm_prefix}.source_system",
-            f"{self.fm_prefix}.target_system",
-            f"{self.fm_prefix}.data_asset",
-        )
-        for table in tables:
-            response = client.delete_table(TableName=table)
-            status = (
-                f"{response['TableDescription']['TableStatus']} {table}"
-            )
-            deploy_logger.write(message=status)
-            time.sleep(10)
-
     def initiate_rollback(self):
         """
         Method to initiate rollback in case an error arises
@@ -221,8 +188,6 @@ class DeployPipeline:
             self._rollback_lambda_creation()
         elif self.state == 5:
             self._rollback_glue_job_creation()
-        elif self.state == 6:
-            self._rollback_source_table_creation()
         else:
             pass
 
@@ -236,7 +201,6 @@ def deploy(config, clone_path, region, multi_region=False, iteration=0):
     deploy_ob.deploy_to_s3()
     deploy_ob.create_lambda_function()
     deploy_ob.create_glue_jobs()
-    deploy_ob.create_dynamodb_tables()
     deploy_ob.create_step_function()
     # While deploying in multiple region do not clean the clone dir
     # since it will be used again and again for multiple regions
