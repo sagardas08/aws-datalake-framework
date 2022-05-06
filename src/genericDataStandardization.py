@@ -24,7 +24,7 @@ def get_global_config():
 
 
 # Get the arguments
-args = getResolvedOptions(sys.argv, ["source_path", "source_id", "asset_id", "exec_id"])
+args = getResolvedOptions(sys.argv, ["source_path", "source_id", "asset_id", "exec_id", "JOB_NAME"])
 global_config = get_global_config()
 
 # Record the start time of the job
@@ -41,12 +41,12 @@ db_region = global_config['db_region']
 conn = Connector(db_secret, db_region, autocommit=True)
 
 # Create object to store data asset info
-asset = DataAsset(args, global_config, run_identifier="data-masking", conn=conn)
+asset = DataAsset(args, global_config, run_identifier="data-quality", conn=conn)
 try:
     # Creating spark dataframe from input file.Supported:CSV,Parquet,JSON,ORC
     source_df = create_spark_df(
         spark,
-        asset.source_file_path,
+        asset.source_path,
         asset.asset_file_type,
         asset.asset_file_delim,
         asset.asset_file_header,
