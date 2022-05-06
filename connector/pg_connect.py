@@ -229,7 +229,6 @@ class Connector:
             cursor.execute(sql)
             records = cursor.fetchall() if not return_type else \
                 [dict(i) for i in cursor.fetchall()]
-            cursor.close()
         except Exception as e:
             print(f"execute() failed due to: {e}")
             raise
@@ -284,7 +283,6 @@ class Connector:
         params = where[1] if where and len(where) == 2 else None
         cursor = self._execute(sql, params)
         rows = cursor.fetchall()
-        cursor.close()
         return rows[len(rows) - limit if limit else 0:]
 
     def retrieve_dict(self, table, cols, where=None, order=None, limit=None):
@@ -304,7 +302,6 @@ class Connector:
         params = where[1] if where and len(where) == 2 else None
         cursor.execute(sql, params)
         records = [dict(i) for i in cursor.fetchall()]
-        cursor.close()
         return records
 
     def retrieve_csv(self, table, cols, where=None, order=None, limit=None):
@@ -329,7 +326,6 @@ class Connector:
         # Note: currently not parameterized to store at a different target location
         with open(f'{table}.csv', 'w') as f:
             self.cursor.copy_expert(op_query, f)
-        self.cursor.close()
 
     def insert(self, table, data: dict, returning=None):
         """
