@@ -4,8 +4,11 @@
   "primary_region": "us-east-1",
   "secondary_region": "us-east-2",
   "log_type": "S",
+  "fm_tgt_prefix": "dl-fmwrk-tgt",
   "secret_name": "cape_privacy_key",
   "project_name": "aws-datalake-framework",
   "git_branch": "develop",
-  "lambda_function_name": "dlFmwrkSrcDataInfo"
+  "lambda_function_name": "dlFmwrkSrcDataInfo",
+  "db_secret": "postgres_dev",
+  "db_region": "us-east-2"
 }

@@ -20,30 +20,25 @@ def get_or_create_db(region, db_name, logger=None):
     :param db_name: The name by which a DB is supposed to be created
     :return: None
     """
-    client = boto3.client('athena', region_name=region)
+    client = boto3.client("athena", region_name=region)
     try:
         response = client.get_database(
-            CatalogName='AwsDataCatalog',
-            DatabaseName='university'
+            CatalogName="AwsDataCatalog", DatabaseName="university"
         )
-        if 'Database' in response.keys():
-            if response['Database']['Name'] == db_name:
+        if "Database" in response.keys():
+            if response["Database"]["Name"] == db_name:
                 logger.write(message=f"The database: {db_name} exists")
             else:
                 print(f"Attempting to create the db: {db_name}")
                 query = f"create database {db_name}"
-                client.start_query_execution(
-                    QueryString=query, WorkGroup='dl-fmwrk'
-                )
+                client.start_query_execution(QueryString=query, WorkGroup="dl-fmwrk")
         else:
             logger.write(message=f"Invalid response: {response}")
     except Exception as e:
         logger.write(message=e)
         logger.write(message=f"Attempting to create the db: {db_name}")
         query = f"create database {db_name}"
-        client.start_query_execution(
-            QueryString=query, WorkGroup='dl-fmwrk'
-        )
+        client.start_query_execution(QueryString=query, WorkGroup="dl-fmwrk")
 
 
 def generate_ddl(df, db, table, path, partition, encrypt):
@@ -70,20 +65,26 @@ def generate_ddl(df, db, table, path, partition, encrypt):
         schema += f"`{column}` {datatype},"
     schema = schema.rstrip(",")
     # setting the Table properties
-    encryption = 'false' if not encrypt else 'true'
+    encryption = "false" if not encrypt else "true"
     # TODO: Partition is currently hardcoded. Add a partition logic
     partition_string = f"PARTITIONED BY (partition_instance bigint)"
     row_format = "ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' "
     input_format = "STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' "
-    output_format = "OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'"
+    output_format = (
+        "OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'"
+    )
     tbl_prop = f"TBLPROPERTIES ('has_encrypted_data'='{encryption}')"
     # creating the dynamic sql statement
-    statement = f"CREATE EXTERNAL TABLE `{db}`.`{table}`({schema}) {row_format} " \
-                f"{input_format} {output_format} {loc_path} {tbl_prop}"
+    statement = (
+        f"CREATE EXTERNAL TABLE `{db}`.`{table}`({schema}) {row_format} "
+        f"{input_format} {output_format} {loc_path} {tbl_prop}"
+    )
     # if partition is enabled, currently supported to a single partition column
     if partition:
-        statement = f"CREATE EXTERNAL TABLE IF NOT EXISTS `{db}`.`{table}`({schema}) " \
-                    f"{partition_string} {row_format} {input_format} {output_format} {loc_path} {tbl_prop}"
+        statement = (
+            f"CREATE EXTERNAL TABLE IF NOT EXISTS `{db}`.`{table}`({schema}) "
+            f"{partition_string} {row_format} {input_format} {output_format} {loc_path} {tbl_prop}"
+        )
     return statement
 
 
@@ -92,14 +93,14 @@ def exists_query(client, table, exec_id):
     returns if a table exists in the said DB or not
     """
     query_result = client.get_query_results(QueryExecutionId=exec_id)
-    result_set = query_result['ResultSet']
-    rows = result_set['Rows']
+    result_set = query_result["ResultSet"]
+    rows = result_set["Rows"]
     row_elements = len(rows)
     exists = False
     if not rows:
         return exists
     elif row_elements >= 1:
-        if table in [x['Data'][0]['VarCharValue'] for x in rows]:
+        if table in [x["Data"][0]["VarCharValue"] for x in rows]:
             exists = True
     return exists
 
@@ -115,9 +116,7 @@ def check_table_exists(client, db, table):
     exists = None
     try:
         response = client.get_table_metadata(
-            CatalogName='AwsDataCatalog',
-            DatabaseName=db,
-            TableName=table
+            CatalogName="AwsDataCatalog", DatabaseName=db, TableName=table
         )
         exists = True
     except ClientError as e:
@@ -127,8 +126,9 @@ def check_table_exists(client, db, table):
 
 
 @log
-def get_or_create_table(region, df, target_info, asset_id,
-                        path, partition=False, encrypt=False, logger=None):
+def get_or_create_table(
+    region, df, target_info, asset_id, path, partition=False, encrypt=False, logger=None
+):
     """
     Create a table in Athena under the specified DB.
     :param logger: The logger object to record details of the function
@@ -141,22 +141,24 @@ def get_or_create_table(region, df, target_info, asset_id,
     :param encrypt: Boolean flag to enable or disable encryption
     :return:
     """
-    ath = boto3.client('athena', region_name=region)
-    db = target_info['domain']
-    table = target_info['subdomain'] + "_" + asset_id
+    ath = boto3.client("athena", region_name=region)
+    db = target_info["domain"]
+    table = target_info["subdomain"] + "_" + asset_id
     # check if the table exists on Athena
     table_exists = check_table_exists(ath, db, table)
     if not table_exists:
         logger.write(message=f"The table: {db}.{table} does not exist.")
         ddl = generate_ddl(df, db, table, path, partition, encrypt)
         # TODO: remove hardcoded WorkGroup values
-        ath.start_query_execution(QueryString=ddl, WorkGroup='dl-fmwrk')
+        ath.start_query_execution(QueryString=ddl, WorkGroup="dl-fmwrk")
     elif table_exists:
         logger.write(message=f"The table: {db}.{table} exists.")
 
 
 @log
-def manage_partition(region, target_info, asset_id, partition_instance, location, logger=None):
+def manage_partition(
+    region, target_info, asset_id, partition_instance, location, logger=None
+):
     """
     Add partitions to the created Athena Table.
 
@@ -169,9 +171,9 @@ def manage_partition(region, target_info, asset_id, partition_instance, location
     :return:
     """
     partition_location = location.replace("s3a", "s3")
-    ath = boto3.client('athena', region_name=region)
-    db = target_info['domain']
-    table = target_info['subdomain'] + "_" + asset_id
+    ath = boto3.client("athena", region_name=region)
+    db = target_info["domain"]
+    table = target_info["subdomain"] + "_" + asset_id
     # Alter table statement
     alter_table = f"""
     ALTER TABLE {db}.{table} ADD IF NOT EXISTS 
@@ -180,4 +182,4 @@ def manage_partition(region, target_info, asset_id, partition_instance, location
     """
     logger.write(message=f"Managing the partitions using {alter_table}")
     # Execute the partition statement on Athena (Workgroup Hardcoded)
-    ath.start_query_execution(QueryString=alter_table, WorkGroup='dl-fmwrk')
+    ath.start_query_execution(QueryString=alter_table, WorkGroup="dl-fmwrk")
