@@ -3,7 +3,6 @@ import json
 import decimal
 from datetime import datetime, timedelta
 from io import StringIO
-from boto3.dynamodb.conditions import Key
 import boto3
 import pydeequ
 from botocore.exceptions import ClientError
@@ -22,13 +21,13 @@ def get_current_time():
 
 @log
 def update_data_catalog(
-        conn,
-        table_name,
-        exec_id,
-        dq_validation=None,
-        data_masking=None,
-        data_standardization=None,
-        logger=None,
+    conn,
+    table_name,
+    exec_id,
+    dq_validation=None,
+    data_masking=None,
+    data_standardization=None,
+    logger=None,
 ):
     # method to update the data catalog entry
     """
@@ -61,8 +60,8 @@ def get_spark(logger=None):
     """
     spark = (
         SparkSession.builder.config("spark.jars.packages", pydeequ.deequ_maven_coord)
-            .config("spark.jars.excludes", pydeequ.f2j_maven_coord)
-            .getOrCreate()
+        .config("spark.jars.excludes", pydeequ.f2j_maven_coord)
+        .getOrCreate()
     )
     return spark
 
@@ -80,12 +79,12 @@ def stop_spark(spark):
 
 @log
 def create_spark_df(
-        spark,
-        source_file_path,
-        asset_file_type,
-        asset_file_delim,
-        asset_file_header,
-        logger=None,
+    spark,
+    source_file_path,
+    asset_file_type,
+    asset_file_delim,
+    asset_file_header,
+    logger=None,
 ):
     # Generates a spark dataframe from the source file based
     # on the different file conditions as specified in the asset info
@@ -209,12 +208,12 @@ def move_source_file(path, dq_result=None, schema_validation=None, logger=None):
 
 @log
 def store_sparkdf_to_s3(
-        dataframe,
-        target_path,
-        asset_file_type,
-        asset_file_delim,
-        asset_file_header,
-        logger=None,
+    dataframe,
+    target_path,
+    asset_file_type,
+    asset_file_delim,
+    asset_file_header,
+    logger=None,
 ):
     """
     utility method to store a Spark dataframe to S3 bucket

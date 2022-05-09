@@ -149,18 +149,11 @@ class DataAsset:
             item["data_standardization"] = data_standardization
         conn.update(table=table_name, data=item, where=where_clause)
 
-    def validate_schema(self, source_df):
+    def validate_schema(self, conn, source_df):
         """
         Method to return if an asset's schema is validated
         :return: Bool
         """
-        schema_validation = validate_schema(
-            self.asset_file_type,
-            self.asset_file_header,
-            source_df,
-            self.metadata_table,
-            self.region,
-            logger=self.logger,
-        )
+        schema_validation = validate_schema(self, source_df, conn, logger=self.logger)
         self.logger.write(message=f"Schema Validation = {schema_validation}")
         return schema_validation
