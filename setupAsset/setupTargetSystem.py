@@ -15,19 +15,17 @@ import time
 import sys
 import os
 from random import random
+from datetime import datetime
+
+from connector import Connector
 from utils.comUtils import getGlobalParams
 
 tgt_sys_id = int(str(random()).split(".")[1])
+global_config = getGlobalParams()
 
 
-def insert_tgt_sys_item_dynamoDB(tgt_json_file, region):
+def insert_tgt_sys_info(db, tgt_json_file, region):
     # TODO: DynamoDB -> RDS: Insert Data
-    global_config = getGlobalParams()
-    dynamodb = boto3.resource("dynamodb", region_name=region)
-    source_system_table = dynamodb.Table(
-        "{}.target_system".format(global_config["fm_prefix"])
-    )
-
     with open(tgt_json_file) as json_file:
         tgt_config = json.load(json_file)
 
@@ -38,29 +36,23 @@ def insert_tgt_sys_item_dynamoDB(tgt_json_file, region):
         + "-"
         + region
     )
-    db_name = (
-        global_config["fm_tgt_prefix"] + "_" + tgt_config["domain"]
-    )
     data_owner = tgt_config["data_owner"]
     support_cntct = tgt_config["support_cntct"]
     domain = tgt_config["domain"]
     subdomain = tgt_config["subdomain"]
-
-    print(
-        "Insert target system info in {}.target_system table".format(
-            global_config["fm_prefix"]
-        )
-    )
-    response = source_system_table.put_item(
-        Item={
-            "tgt_sys_id": tgt_sys_id,
-            "bucket_name": bucket_name,
+    table = 'target_system'
+    print(f"Insert source system info in {global_config['fm_prefix']}.{table} table")
+    current_time = datetime.now()
+    data = {
+            "target_id": tgt_sys_id,
+            "bucket_nm": bucket_name,
             "data_owner": data_owner,
             "support_cntct": support_cntct,
             "domain": domain,
             "subdomain": subdomain,
+            "modified_ts": current_time
         }
-    )
+    db.insert(table, data)
 
 
 def create_tgt_sys_db(tgt_json_file, region):
@@ -85,21 +77,21 @@ def create_tgt_sys_db(tgt_json_file, region):
 
 
 def main():
-    global_config = getGlobalParams()
-    insert_tgt_sys_item_dynamoDB(
-        sys.argv[1], global_config["primary_region"]
-    )
-    insert_tgt_sys_item_dynamoDB(
-        sys.argv[1], global_config["secondary_region"]
-    )
-    insert_tgt_sys_item_dynamoDB(
-        sys.argv[1], global_config["primary_region"]
-    )
-    insert_tgt_sys_item_dynamoDB(
-        sys.argv[1], global_config["secondary_region"]
-    )
-    create_tgt_sys_db(sys.argv[1], global_config["primary_region"])
-    create_tgt_sys_db(sys.argv[1], global_config["secondary_region"])
+    db = Connector(global_config['db_secret'], global_config['db_region'])
+    try:
+        insert_tgt_sys_info(
+            db, sys.argv[1], global_config["primary_region"]
+        )
+        insert_tgt_sys_info(
+            db, sys.argv[1], global_config["secondary_region"]
+        )
+    except Exception as e:
+        print(e)
+        db.rollback()
+    finally:
+        db.close()
+    # create_tgt_sys_db(sys.argv[1], global_config["primary_region"])
+    # create_tgt_sys_db(sys.argv[1], global_config["secondary_region"])
 
 
 if __name__ == "__main__":

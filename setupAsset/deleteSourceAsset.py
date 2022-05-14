@@ -1,3 +1,5 @@
+# usage: python setupAsset/deleteSourceAsset.py asset_id region
+
 import sys
 import json
 import boto3
@@ -24,16 +26,15 @@ class Asset:
         self.asset_id = asset_id
         self.region = region
         self.fm_prefix = config["fm_prefix"]
+        # TODO: DynamoDB -> RDS: client Library
+
+        # self.connector = Connector(global_config["db_secret"], global_config["db_region"], autocommit=True)
         self.db = db
         self.asset_details = self.get_asset_details(db)
         self.src_sys_id = self.asset_details["src_sys_id"]
 
     def get_asset_details(self, db):
-        """
-        Get asset details from data_asset table
-        :param db:
-        :return:
-        """
+        # TODO: DynamoDB -> RDS: Retrieve Data
         response = db.retrieve_dict(table="data_asset", cols="all", where=("asset_id = %s", [self.asset_id]))
         return response[0]
 
@@ -85,6 +86,8 @@ def remove_asset_s3(asset):
 
 
 def remove_asset_col_details(asset):
+    # TODO: DynamoDB -> RDS: Delete Table
+    # Delete details of this asset from dl_fmwrk.data_asset_attributes
     """
     Remove the table fm_prefix.data_asset.asset_id from dynamodb
     """
@@ -98,6 +101,8 @@ def remove_asset_col_details(asset):
 
 
 def remove_asset_catalog_details(asset):
+    # TODO: DynamoDB -> RDS: Delete Table
+    # delete asset from dl_fmwrk.data_asset_catalogs
     """
     Remove the table fm_prefix.data_catalog.asset_id from dynamodb
     :param asset:
@@ -113,6 +118,7 @@ def remove_asset_catalog_details(asset):
 
 
 def remove_asset_item(asset):
+    # TODO: DynamoDB -> RDS: Delete an entry from a Table
     """
     Remove Asset details from fm_prefix.data_asset
     """

@@ -53,7 +53,7 @@ def zip_utils(source_path, target_zip_path, base_dir=None):
             base_name=target_zip_path,
             format="zip",
             root_dir=source_path,
-            base_dir="utils",
+            base_dir=base_dir,
         )
     else:
         shutil.make_archive(
@@ -82,16 +82,20 @@ def deploy_to_s3(root_dir, config, region=None):
     lambda_zip_target_path = (
         root_dir + f"/{project_name}/lambda/lambda_function"
     )
+    connector_zip_src_path = root_dir + f"/{project_name}"
+    connector_zip_target_path = root_dir + f"/{project_name}/dependencies/connector"
     try:
         zip_utils(
             utils_zip_src_path, utils_zip_target_path, base_dir="utils"
         )
         zip_utils(lambda_zip_src_path, lambda_zip_target_path)
+        zip_utils(connector_zip_src_path, connector_zip_target_path, base_dir='connector')
         # Cleans the code bucket prior to uploading of the latest code
         cleanup_cmd = f"aws s3 rm s3://{bucket_name} --recursive"
         copy_cmd = f"aws s3 cp {source_path} s3://{bucket_name}/{project_name} --recursive"
         os.system(cleanup_cmd)
         os.system(copy_cmd)
+
         return True
     except Exception as e:
         print(e)
