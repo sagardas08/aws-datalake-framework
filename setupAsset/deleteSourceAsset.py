@@ -1,12 +1,10 @@
 # usage: python setupAsset/deleteSourceAsset.py asset_id region
 
-import json
 import sys
-
+import json
 import boto3
-from boto3.dynamodb.conditions import Key
-from botocore.errorfactory import ClientError
-
+from connector.pg_connect import Connector
+from utils.comUtils import getGlobalParams
 from utils.logger import Logger
 
 # Declaring Logger and Config
@@ -18,47 +16,40 @@ file.close()
 
 
 class Asset:
-    def __init__(self, asset_id, region):
+    def __init__(self, db, asset_id, region):
         """
         A reusable class to contain the associated asset information
-        :param asset_id:
-        :param region:
+        :param db: postgres database connector
+        :param asset_id: Asset ID
+        :param region: Region e.g. us-east-1
         """
         self.asset_id = asset_id
         self.region = region
         self.fm_prefix = config["fm_prefix"]
         # TODO: DynamoDB -> RDS: client Library
-        self.dynamodb = boto3.resource(
-            "dynamodb", region_name=self.region
-        )
-        self.dynamodb_client = boto3.client(
-            "dynamodb", region_name=self.region
-        )
-        self.asset_details = self.get_asset_details()
+
+        # self.connector = Connector(global_config["db_secret"], global_config["db_region"], autocommit=True)
+        self.db = db
+        self.asset_details = self.get_asset_details(db)
         self.src_sys_id = self.asset_details["src_sys_id"]
 
-    def get_asset_details(self):
+    def get_asset_details(self, db):
         # TODO: DynamoDB -> RDS: Retrieve Data
-        table = self.dynamodb.Table(f"{self.fm_prefix}.data_asset")
-        response = table.query(
-            KeyConditionExpression=Key("asset_id").eq(
-                int(self.asset_id)
-            )
-        )
-        return response["Items"][0]
+        response = db.retrieve_dict(table="data_asset", cols="all", where=("asset_id = %s", [self.asset_id]))
+        return response[0]
 
 
 def remove_asset_s3(asset):
     """
     Remove asset details from the stored S3 folder
     :param asset:
-    :return:
+    :return: None
     """
     s3_client = boto3.client("s3", region_name=asset.region)
     # Creating the bucket string
     bucket = f"{asset.fm_prefix}-{asset.src_sys_id}-{asset.region}"
     objects = s3_client.list_objects(
-        Bucket=bucket, Prefix=asset.asset_id
+        Bucket=bucket, Prefix=str(asset.asset_id)
     )
 
     try:
@@ -100,16 +91,13 @@ def remove_asset_col_details(asset):
     """
     Remove the table fm_prefix.data_asset.asset_id from dynamodb
     """
-    asset_detail_table = (
-        f"{asset.fm_prefix}.data_asset.{asset.asset_id}"
-    )
     try:
-        asset.dynamodb_client.delete_table(TableName=asset_detail_table)
+        asset.db.delete(table="data_asset_attributes", where=("asset_id = %s", [asset.asset_id]))
         logger.write(
-            message=f"Deleted Table {asset_detail_table} from DynamoDB"
+            message=f"Deleted records of asset_id: {asset.asset_id} from data_asset_attributes"
         )
-    except ClientError:
-        logger.write(message=f"The table: {asset_detail_table} d.n.e.")
+    except Exception as error:
+        logger.write(message=f"Exception Type: {type(error)}")
 
 
 def remove_asset_catalog_details(asset):
@@ -120,18 +108,13 @@ def remove_asset_catalog_details(asset):
     :param asset:
     :return:
     """
-    asset_catalog_table = (
-        f"{asset.fm_prefix}.data_catalog.{asset.asset_id}"
-    )
     try:
-        asset.dynamodb_client.delete_table(
-            TableName=asset_catalog_table
-        )
+        asset.db.delete(table="data_asset_catalogs", where=("asset_id = %s", [asset.asset_id]))
         logger.write(
-            message=f"Deleted Table {asset_catalog_table} from DynamoDB"
+            message=f"Deleted records of asset_id: {asset.asset_id} from data_asset_catalog"
         )
-    except ClientError:
-        logger.write(message=f"The table: {asset_catalog_table} d.n.e.")
+    except Exception as error:
+        logger.write(message=f"Exception Type: {type(error)}")
 
 
 def remove_asset_item(asset):
@@ -139,26 +122,13 @@ def remove_asset_item(asset):
     """
     Remove Asset details from fm_prefix.data_asset
     """
-    asset_detail_table = f"{asset.fm_prefix}.data_asset"
-    table = asset.dynamodb.Table(asset_detail_table)
     try:
-        response = table.delete_item(
-            Key={
-                "asset_id": int(asset.asset_id),
-                "src_sys_id": int(asset.src_sys_id),
-            }
+        asset.db.delete(table="data_asset", where=("asset_id = %s", [asset.asset_id]))
+        logger.write(
+            message=f"Deleted {asset.asset_id} from data_asset"
         )
-        status_code = response["ResponseMetadata"]["HTTPStatusCode"]
-        if int(status_code) == 200:
-            logger.write(
-                message=f"Deleted {asset.asset_id} from {asset_detail_table}"
-            )
-        else:
-            logger.write(
-                message=f"Unable to delete {asset.asset_id} from {asset_detail_table}"
-            )
-    except ClientError:
-        logger.write(message=f"The table: {asset_detail_table} d.n.e.")
+    except Exception as error:
+        logger.write(message=f"Exception Type: {type(error)}")
 
 
 def delete_source_asset_region_wise(asset):
@@ -166,24 +136,28 @@ def delete_source_asset_region_wise(asset):
     Remove the asset in the specified region
     """
     remove_asset_s3(asset)
-    remove_asset_item(asset)
     remove_asset_col_details(asset)
     remove_asset_catalog_details(asset)
+    remove_asset_item(asset)
 
 
-def delete_source_asset(asset_id, region=None):
+def delete_source_asset(db, asset_id, region=None):
     """
     Remove the details of an asset from the source system
+    :param db: postgres database connector
+    :param asset_id: Asset ID
+    :param region: Region e.g. us-east-1
+    :return: None
     """
     if region:
         # if a region is specified then delete the asset in that region
-        asset = Asset(asset_id, region)
+        asset = Asset(db, asset_id, region)
         delete_source_asset_region_wise(asset)
     else:
         # Remove the asset in all the regions
         regions = [config["primary_region"], config["secondary_region"]]
         for region in regions:
-            asset = Asset(asset_id, region)
+            asset = Asset(db, asset_id, region)
             delete_source_asset_region_wise(asset)
 
 
@@ -191,20 +165,28 @@ def main():
     """
     Main entry point of the module
     """
+    global_config = getGlobalParams()
     arguments = sys.argv
-    if len(arguments) < 2:
-        logger.write(message="Missing Arguments: asset_id and region")
-    elif len(arguments) == 2:
-        asset_id = arguments[1]
-        logger.write(message=f"Attempting to delete asset: {asset_id}")
-        delete_source_asset(asset_id)
-    elif len(arguments) == 3:
-        asset_id = arguments[1]
-        region = arguments[2]
-        logger.write(
-            message=f"Attempting to delete asset: {asset_id} in region: {region}"
-        )
-        delete_source_asset(asset_id, region)
+    db = Connector(global_config["db_secret"], global_config["db_region"], autocommit=True)
+    try:
+        if len(arguments) < 2:
+            logger.write(message="Missing Arguments: asset_id and region")
+        elif len(arguments) == 2:
+            asset_id = arguments[1]
+            logger.write(message=f"Attempting to delete asset: {asset_id}")
+            delete_source_asset(db, asset_id)
+        elif len(arguments) == 3:
+            asset_id = arguments[1]
+            region = arguments[2]
+            logger.write(
+                message=f"Attempting to delete asset: {asset_id} in region: {region}"
+            )
+            delete_source_asset(db, asset_id, region)
+    except Exception as e:
+        print(e)
+        db.rollback()
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":
