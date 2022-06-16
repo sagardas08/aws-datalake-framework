@@ -10,5 +10,6 @@
   "git_branch": "develop",
   "lambda_function_name": "dlFmwrkSrcDataInfo",
   "db_secret": "postgres_dev",
-  "db_region": "us-east-2"
+  "db_region": "us-east-2",
+  "workgroup": "dl-fmwrk-us-east-2"
 }

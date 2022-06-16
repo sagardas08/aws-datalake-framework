@@ -8,11 +8,9 @@ def get_schema_details(db, table, asset_id):
     """
     Get the details of schema from DynamoDB
     """
-    # TODO: DynamoDB -> RDS: Retrieve Data
     response = db.retrieve_dict(
         table, cols=["col_id", "col_nm"], where=("asset_id=%s", [asset_id])
     )
-    print(response)
     return response
 
 

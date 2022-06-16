@@ -75,7 +75,8 @@ try:
 
     # Storing the target file to Athena with DB = Domain and Table = Sub-domain_AssetId
     domain = target_system_info["domain"]
-    get_or_create_db(asset.region, domain, asset.logger)
+    workgroup = global_config['workgroup']
+    get_or_create_db(asset.region, domain, workgroup, asset.logger)
     athena_path = get_athena_path(target_system_info, asset.asset_id)
 
     # Updating the data catalog table to "Completed" if the standardization is successful
@@ -88,6 +89,7 @@ try:
         target_system_info,
         asset.asset_name,
         athena_path,
+        wg=workgroup,
         partition=True,
         encrypt=asset.encryption,
         logger=asset.logger,
@@ -100,7 +102,8 @@ try:
         asset.asset_name,
         timestamp,
         target_path,
-        asset.logger,
+        wg=workgroup,
+        logger=asset.logger,
     )
 
 except Exception as e:
