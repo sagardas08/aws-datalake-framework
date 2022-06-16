@@ -7,17 +7,18 @@ from botocore.exceptions import ClientError
 
 from .logger import log
 
-# Workgroup Hardcoded
+# Workgroup is now parameterized
 
 
 @log
-def get_or_create_db(region, db_name, logger=None):
+def get_or_create_db(region, db_name, workgroup, logger=None):
     """
     Utility method to create a Database if one doesn't exist
 
     :param logger: Logging object to record details
     :param region: AWS region
     :param db_name: The name by which a DB is supposed to be created
+    :param workgroup:
     :return: None
     """
     client = boto3.client("athena", region_name=region)
@@ -31,14 +32,14 @@ def get_or_create_db(region, db_name, logger=None):
             else:
                 print(f"Attempting to create the db: {db_name}")
                 query = f"create database {db_name}"
-                client.start_query_execution(QueryString=query, WorkGroup="dl-fmwrk")
+                client.start_query_execution(QueryString=query, WorkGroup=workgroup)
         else:
             logger.write(message=f"Invalid response: {response}")
     except Exception as e:
         logger.write(message=e)
         logger.write(message=f"Attempting to create the db: {db_name}")
         query = f"create database {db_name}"
-        client.start_query_execution(QueryString=query, WorkGroup="dl-fmwrk")
+        client.start_query_execution(QueryString=query, WorkGroup=workgroup)
 
 
 def generate_ddl(df, db, table, path, partition, encrypt):
@@ -127,10 +128,11 @@ def check_table_exists(client, db, table):
 
 @log
 def get_or_create_table(
-    region, df, target_info, asset_id, path, partition=False, encrypt=False, logger=None
+    region, df, target_info, asset_id, path, wg, partition=False, encrypt=False, logger=None
 ):
     """
     Create a table in Athena under the specified DB.
+    :param wg: primary workgroup for athena
     :param logger: The logger object to record details of the function
     :param region: The AWS region
     :param df: The Spark Dataframe object
@@ -149,15 +151,14 @@ def get_or_create_table(
     if not table_exists:
         logger.write(message=f"The table: {db}.{table} does not exist.")
         ddl = generate_ddl(df, db, table, path, partition, encrypt)
-        # TODO: remove hardcoded WorkGroup values
-        ath.start_query_execution(QueryString=ddl, WorkGroup="dl-fmwrk")
+        ath.start_query_execution(QueryString=ddl, WorkGroup=wg)
     elif table_exists:
         logger.write(message=f"The table: {db}.{table} exists.")
 
 
 @log
 def manage_partition(
-    region, target_info, asset_id, partition_instance, location, logger=None
+    region, target_info, asset_id, partition_instance, location, wg, logger=None
 ):
     """
     Add partitions to the created Athena Table.
@@ -168,6 +169,7 @@ def manage_partition(
     :param asset_id:
     :param partition_instance:
     :param location:
+    :param wg:
     :return:
     """
     partition_location = location.replace("s3a", "s3")
@@ -181,5 +183,4 @@ def manage_partition(
     LOCATION '{partition_location}';
     """
     logger.write(message=f"Managing the partitions using {alter_table}")
-    # Execute the partition statement on Athena (Workgroup Hardcoded)
-    ath.start_query_execution(QueryString=alter_table, WorkGroup="dl-fmwrk")
+    ath.start_query_execution(QueryString=alter_table, WorkGroup=wg)
