@@ -32,6 +32,8 @@ db_region = global_config['db_region']
 conn = Connector(db_secret, db_region, autocommit=True)
 # Create object to store data asset info
 asset = DataAsset(args, global_config, run_identifier="data-masking", conn=conn)
+# Update the data catalog dynamoDB table to "In-Progress" for easy monitoring
+asset.update_data_catalog(conn, data_masking="In-Progress",data_masking_exec_id=args['JOB_RUN_ID'])
 # Creating spark Session object
 spark = get_spark_for_masking(asset.logger)
 try:
@@ -44,8 +46,6 @@ try:
         asset.asset_file_header,
         asset.logger,
     )
-    # Update the data catalog dynamoDB table to "In-Progress" for easy monitoring
-    asset.update_data_catalog(conn, data_masking="In-Progress")
     # Getting data asset table dedicated for a specific asset which specifies if masking is required or not
     metadata = asset.get_asset_metadata(conn)
     # Getting the masking key from AWS Secrets Manager
@@ -54,7 +54,6 @@ try:
     result = run_data_masking(source_df, metadata, key, asset.logger)
     # Gets the target path where the masked data needs to be stored after masking
     target_path = asset.get_masking_path()
-    target_path = target_path + get_timestamp(asset.source_file_path) + "/"
     # Storing the masked data in the target path
     store_sparkdf_to_s3(
         result,
@@ -70,6 +69,8 @@ except Exception as e:
     # Update data catalog table to "Failed" in case of exceptions
     asset.update_data_catalog(conn, data_masking="Failed")
     asset.logger.write(message=str(e))
+    asset.logger.write_logs_to_s3()
+    raise sys.exit()
 
 end_time = time.time()
 asset.logger.write(message=f"Time Taken = {round(end_time - start_time, 2)} seconds")
@@ -79,3 +80,4 @@ asset.logger.write_logs_to_s3()
 conn.close()
 # Stop the spark session
 stop_spark(spark)
+
