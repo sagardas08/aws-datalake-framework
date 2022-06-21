@@ -13,6 +13,8 @@ from cape_privacy.spark.transformations.tokenizer import (
 )
 from pyspark import sql
 from pyspark.sql import functions
+from pyspark.sql.functions import col
+from pyspark.sql.types import StringType,BooleanType,DateType
 from .logger import log
 
 
@@ -33,7 +35,7 @@ def run_data_masking(source_df, metadata, key, logger=None):
     Utility method to mask sensitive data
     :return: masked spark dataframe
     """
-    tokenize = Tokenizer(key=key)
+    tokenize = Tokenizer(max_token_len=10, key=key)
     perturb_numeric = NumericPerturbation(dtype=dtypes.Integer, min=-10, max=10)
     perturb_date = DatePerturbation(
         frequency=("YEAR", "MONTH", "DAY"), min=(-10, -5, -5), max=(10, 5, 5)
@@ -45,6 +47,7 @@ def run_data_masking(source_df, metadata, key, logger=None):
             # Tokenize the specified columns
             if a == "req_tokenization" and (str(b) == "True" or str(b) == "true"):
                 col_name = i.get("col_nm")
+                source_df = source_df.withColumn(col_name, col(col_name).cast(StringType()))
                 source_df = source_df.withColumn(
                     col_name, tokenize(functions.col(col_name))
                 )
@@ -63,7 +66,7 @@ def run_data_masking(source_df, metadata, key, logger=None):
                 )
             # Perturbs the numeric values of specified columns
             if a == "req_numericperturbation" and (
-                str(b) == "True" or str(b) == "true"
+                    str(b) == "True" or str(b) == "true"
             ):
                 col_name = i.get("col_nm")
                 source_df = source_df.withColumn(
