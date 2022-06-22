@@ -35,7 +35,7 @@ def run_data_masking(source_df, metadata, key, logger=None):
     Utility method to mask sensitive data
     :return: masked spark dataframe
     """
-    tokenize = Tokenizer(max_token_len=10, key=key)
+    tokenize = ReversibleTokenizer(key=key)
     perturb_numeric = NumericPerturbation(dtype=dtypes.Integer, min=-10, max=10)
     perturb_date = DatePerturbation(
         frequency=("YEAR", "MONTH", "DAY"), min=(-10, -5, -5), max=(10, 5, 5)
