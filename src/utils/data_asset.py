@@ -1,5 +1,5 @@
 import boto3
-from .comUtils import get_metadata
+from .comUtils import get_metadata, get_timestamp
 from .dqUtils import generate_code
 from .logger import Logger
 from .validateSchema import validate_schema
@@ -56,8 +56,8 @@ class DataAsset:
         :return: s3 uri
         """
         return (
-            self.source_file_path.split(self.asset_id)[0]
-            + f"{self.asset_id}/logs/{self.exec_id}/dq_results"
+                self.source_file_path.split(self.asset_id)[0]
+                + f"{self.asset_id}/logs/{self.exec_id}/dq_results"
         )
 
     def get_error_path(self):
@@ -69,7 +69,7 @@ class DataAsset:
         :return: s3 uri
         """
         return (
-            self.source_file_path.split(self.asset_id)[0] + f"{self.asset_id}/masked/"
+                self.source_file_path.split(self.asset_id)[0] + f"{self.asset_id}/masked/{get_timestamp(self.source_file_path)}/"
         )
 
     def get_asset_metadata(self, conn):
@@ -120,11 +120,15 @@ class DataAsset:
         return code
 
     def update_data_catalog(
-        self,
-        conn,
-        dq_validation=None,
-        data_masking=None,
-        data_standardization=None,
+            self,
+            conn,
+            dq_validation=None,
+            data_masking=None,
+            data_standardization=None,
+            tgt_file_path=None,
+            dq_validation_exec_id=None,
+            data_masking_exec_id=None,
+            data_standardization_exec_id=None
     ):
         """
         Updates the data catalog in DynamoDB
@@ -137,16 +141,37 @@ class DataAsset:
                 message=f"updating data catalog entry dq_validation with {dq_validation}"
             )
             item["dq_validation"] = dq_validation
-        elif data_masking:
+        if data_masking:
             self.logger.write(
                 message=f"updating data catalog entry data_masking with {data_masking}"
             )
             item["data_masking"] = data_masking
-        elif data_standardization:
+        if data_standardization:
             self.logger.write(
                 message=f"updating data catalog entry data_standardization with {data_standardization}"
             )
             item["data_standardization"] = data_standardization
+        if tgt_file_path:
+            self.logger.write(
+                message=f"updating data catalog entry tgt_file_path with {tgt_file_path}"
+            )
+            item["tgt_file_path"] = tgt_file_path
+        if dq_validation_exec_id:
+            self.logger.write(
+                message=f"updating data catalog entry dq_validation_exec_id with {dq_validation_exec_id}"
+            )
+            item["dq_validation_exec_id"] = dq_validation_exec_id
+        if data_masking_exec_id:
+            self.logger.write(
+                message=f"updating data catalog entry data_masking_exec_id with {data_masking_exec_id}"
+            )
+            item["data_masking_exec_id"] = data_masking_exec_id
+        if data_standardization_exec_id:
+            self.logger.write(
+                message=f"updating data catalog entry data_standardization_exec_id with {data_standardization_exec_id}"
+            )
+            item["data_standardization_exec_id"] = data_standardization_exec_id
+
         conn.update(table=table_name, data=item, where=where_clause)
 
     def validate_schema(self, conn, source_df):

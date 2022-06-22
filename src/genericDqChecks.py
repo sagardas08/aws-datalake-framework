@@ -44,6 +44,8 @@ db_region = global_config['db_region']
 conn = Connector(db_secret, db_region, autocommit=True)
 # Creating an object to house imp info about the asset in one place
 asset = DataAsset(args, global_config, run_identifier="data-quality", conn=conn)
+# update the data catalog that DQ is in progress
+asset.update_data_catalog(conn, dq_validation="In-Progress",dq_validation_exec_id=args['JOB_RUN_ID'])
 # Creation of source dataframe using spark and asset properties
 spark = get_spark(asset.logger)
 source_df = create_spark_df(
@@ -58,8 +60,6 @@ source_df = create_spark_df(
 # if the schema is validated, continue with the DQ else stop the process
 if asset.validate_schema(conn, source_df):
     try:
-        # update the data catalog that DQ is in progress
-        asset.update_data_catalog(conn, dq_validation="In-Progress")
         # dynamically generate the DQ code using asset properties
         dq_code = asset.generate_dq_code(conn)
         # create a pydeequ check object, required while executing the DQ code
@@ -86,6 +86,8 @@ if asset.validate_schema(conn, source_df):
         asset.logger.write(message=str(e))
         asset.update_data_catalog(conn, dq_validation="Failed")
         asset.logger.write_logs_to_s3()
+        stop(conn)
+        raise Exception("Failures were encountered in the source file")
     stop(conn)
 else:
     # In case of invalid schema update the status to failed
