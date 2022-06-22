@@ -126,6 +126,7 @@ class DataAsset:
             data_masking=None,
             data_standardization=None,
             tgt_file_path=None,
+            dq_validation_exec_id=None,
             data_masking_exec_id=None,
             data_standardization_exec_id=None
     ):
@@ -155,6 +156,11 @@ class DataAsset:
                 message=f"updating data catalog entry tgt_file_path with {tgt_file_path}"
             )
             item["tgt_file_path"] = tgt_file_path
+        if dq_validation_exec_id:
+            self.logger.write(
+                message=f"updating data catalog entry dq_validation_exec_id with {dq_validation_exec_id}"
+            )
+            item["dq_validation_exec_id"] = dq_validation_exec_id
         if data_masking_exec_id:
             self.logger.write(
                 message=f"updating data catalog entry data_masking_exec_id with {data_masking_exec_id}"
