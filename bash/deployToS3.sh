@@ -65,13 +65,13 @@ aws glue create-job \
   --worker-type G.2X \
   --region $region
 
-aws glue delete-job --job-name ${fm_prefix}-data-standardization --region $region
+aws glue delete-job --job-name ${fm_prefix}-data-publish --region $region
 aws glue create-job \
-  --name ${fm_prefix}-data-standardization \
+  --name ${fm_prefix}-data-publish \
   --role 2482-misc-service-role \
   --command "{ \
     \"Name\": \"glueetl\", \
-    \"ScriptLocation\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/src/genericDataStandardization.py\" \
+    \"ScriptLocation\": \"s3://${fm_prefix}-code-$region/aws-datalake-framework/src/genericDataPublish.py\" \
     }" \
   --default-arguments "{ \
     \"--TempDir\": \"s3://${fm_prefix}-code-$region/temporary/\", \
