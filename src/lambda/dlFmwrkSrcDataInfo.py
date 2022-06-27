@@ -48,7 +48,7 @@ def lambda_handler(event, context):
         "src_sys_id": int(source_id),
         "asset_id": int(asset_id),
         "dq_validation": "not started",
-        "data_standardization": "not started",
+        "data_publish": "not started",
         "data_masking": "not started",
         "src_file_path": source_path,
         "proc_start_ts": proc_start_ts,

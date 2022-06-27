@@ -159,7 +159,7 @@ class DeployPipeline:
         jobs = (
             f"{self.fm_prefix}-data-quality-checks",
             f"{self.fm_prefix}-data-masking",
-            f"{self.fm_prefix}-data-standardization",
+            f"{self.fm_prefix}-data-publish",
         )
         client = boto3.client("glue", region_name=self.region)
         for job in jobs:

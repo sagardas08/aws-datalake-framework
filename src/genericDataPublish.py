@@ -6,9 +6,10 @@ from awsglue.job import Job
 from pyspark.context import SparkContext
 from utils.data_asset import DataAsset
 from utils.comUtils import *
-from utils.standardizationUtils import *
+from utils.publishUtils import *
 from utils.athena_ddl import get_or_create_db, get_or_create_table, manage_partition
 from connector import Connector
+from connector import RedshiftConnector
 
 
 def get_global_config():
@@ -39,15 +40,15 @@ db_secret = global_config['db_secret']
 db_region = global_config['db_region']
 conn = Connector(db_secret, db_region, autocommit=True)
 # Create object to store data asset info
-asset = DataAsset(args, global_config, run_identifier="data-standardization", conn=conn)
+asset = DataAsset(args, global_config, run_identifier="data-publish", conn=conn)
 # Update the data catalog dynamoDB table to "In-Progress" for easy monitoring
-asset.update_data_catalog(conn, data_standardization="In-Progress",data_standardization_exec_id=args['JOB_RUN_ID'])
-path_for_standardization = asset.get_masking_path()
+asset.update_data_catalog(conn, data_publish="In-Progress",data_publish_exec_id=args['JOB_RUN_ID'])
+path_for_publish = asset.get_masking_path()
 try:
     # Creating spark dataframe from input file.Supported:CSV,Parquet,JSON,ORC
     source_df = create_spark_df(
         spark,
-        path_for_standardization,
+        path_for_publish,
         asset.asset_file_type,
         asset.asset_file_delim,
         asset.asset_file_header,
@@ -57,7 +58,7 @@ try:
     metadata = asset.get_asset_metadata(conn)
 
     # Function to standardize the data to a user required format
-    result = run_data_standardization(source_df, metadata, asset.logger)
+    result = run_data_publish(source_df, metadata, asset.logger)
 
     # Getting data from target system table
     target_system_info = get_target_system_info(conn, asset.target_id, asset.logger)
@@ -65,10 +66,17 @@ try:
     # Getting the timestamp identifier from the source path
     timestamp = get_timestamp(asset.source_path)
 
-    # Getting the standardization path with the help of info from target system
-    target_path = get_standardization_path(
+    # Getting the publish path with the help of info from target system
+    target_path = get_publish_path(
         target_system_info, asset.asset_id, timestamp, asset.logger
     )
+    redshift_db = target_system_info["rs_db_nm"]
+    redshift_secret = global_config['redshift_secret']
+    redshift_region = global_config['redshift_region']
+    rs_conn = RedshiftConnector(redshift_db,redshift_secret,redshift_region, autocommit=True)
+    if asset.rs_load_ind:
+        result.repartition(1).write.csv(target_path, mode="overwrite")
+        asset.load_to_redshift(rs_conn,target_system_info,target_path,timestamp)
     # Writing the standardized data to the target path in parquet format
     result.repartition(1).write.parquet(target_path, mode="overwrite")
 
@@ -81,8 +89,8 @@ try:
     get_or_create_db(asset.region, domain, workgroup, asset.logger)
     athena_path = get_athena_path(target_system_info, asset.asset_id)
 
-    # Updating the data catalog table to "Completed" if the standardization is successful
-    asset.update_data_catalog(conn, data_standardization="Completed")
+    # Updating the data catalog table to "Completed" if the publish is successful
+    asset.update_data_catalog(conn, data_publish="Completed")
 
     # Create table in Athena
     get_or_create_table(
@@ -111,7 +119,7 @@ try:
 except Exception as e:
     asset.logger.write(message=str(e))
     # Updating the data catalog table to "Failed" in case of exceptions
-    asset.update_data_catalog(conn, data_standardization="Failed")
+    asset.update_data_catalog(conn, data_publish="Failed")
     asset.logger.write_logs_to_s3()
     raise sys.exit()
 

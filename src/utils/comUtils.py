@@ -26,7 +26,7 @@ def update_data_catalog(
     exec_id,
     dq_validation=None,
     data_masking=None,
-    data_standardization=None,
+    data_publish=None,
     logger=None,
 ):
     # method to update the data catalog entry
@@ -36,7 +36,7 @@ def update_data_catalog(
     :param exec_id: ID of each execution
     :param dq_validation: Status of dq_validation
     :param data_masking: Status of data_masking
-    :param data_standardization: Status of data_standardization
+    :param data_publish: Status of data_publish
     :param logger: Logger object
     :return: None
     """
@@ -45,8 +45,8 @@ def update_data_catalog(
         item["dq_validation"] = dq_validation
     elif data_masking:
         item["data_masking"] = data_masking
-    elif data_standardization:
-        item["data_standardization"] = data_standardization
+    elif data_publish:
+        item["data_publish"] = data_publish
     where_clause = ("exec_id=%s", [exec_id])
     conn.update(table=table_name, data=item, where=where_clause)
 
@@ -322,7 +322,7 @@ def get_target_system_info(conn, target_id, logger=None):
 
 
 @log
-def get_standardization_path(target_system_info, asset_id, timestamp, logger=None):
+def get_publish_path(target_system_info, asset_id, timestamp, logger=None):
     """
     Utility function to get the path where the standardized file should be stored
     :param target_system_info: Dictionary containing target system info
