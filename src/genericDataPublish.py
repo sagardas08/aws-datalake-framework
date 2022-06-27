@@ -71,12 +71,19 @@ try:
         target_system_info, asset.asset_id, timestamp, asset.logger
     )
     redshift_db = target_system_info["rs_db_nm"]
+    redshift_schema = target_system_info["rs_schema_nm"]
     redshift_secret = global_config['redshift_secret']
     redshift_region = global_config['redshift_region']
-    rs_conn = RedshiftConnector(redshift_db,redshift_secret,redshift_region, autocommit=True)
+    rs_conn = RedshiftConnector(redshift_db,
+                                redshift_secret,
+                                redshift_region, autocommit=True)
+    # Check if the schema is available
+    get_or_create_rs_schema(rs_conn, redshift_schema)
+    # Check if the table is available
+    get_or_create_rs_table(rs_conn, result, redshift_schema, asset.rs_stg_table_nm)
     if asset.rs_load_ind:
         result.repartition(1).write.csv(target_path, mode="overwrite")
-        asset.load_to_redshift(rs_conn,target_system_info,target_path,timestamp)
+        asset.load_to_redshift(rs_conn, target_system_info, target_path, timestamp)
     # Writing the standardized data to the target path in parquet format
     result.repartition(1).write.parquet(target_path, mode="overwrite")
 

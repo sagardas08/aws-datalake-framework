@@ -22,3 +22,25 @@ def run_data_publish(source_df, metadata, logger=None):
     logger.write(message="Data publish done successfully")
     # Returns spark dataframe
     return source_df
+
+
+@log
+def get_or_create_rs_schema(conn, schema, logger=None):
+    # TODO: check if rs_schema exists or not before creating the schema
+    conn.create_schema(schema)
+
+
+@log
+def get_or_create_rs_table(conn, df, db_schema, table_name, pk_column=None, logger=None):
+    """
+
+    :param conn:
+    :param df:
+    :param db_schema:
+    :param table_name:
+    :param pk_column:
+    :param logger:
+    :return:
+    """
+    # TODO: check if rs_table exists or not before creating the table
+    conn.create_table(df, db_schema, table_name, pk_column=pk_column)

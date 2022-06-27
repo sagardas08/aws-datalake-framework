@@ -39,8 +39,8 @@ class DataAsset:
         self.asset_file_header = items["file_header"]
         self.target_id = items["target_id"]
         self.encryption = items["file_encryption_ind"]
-        self.rs_stg_table_nm=items["rs_stg_table_nm"]
-        self.rs_load_ind=items["rs_load_ind"]
+        self.rs_stg_table_nm = items["rs_stg_table_nm"]
+        self.rs_load_ind = items["rs_load_ind"]
 
     def get_data_asset_info(self, conn):
         """
@@ -173,7 +173,6 @@ class DataAsset:
                 message=f"updating data catalog entry data_publish_exec_id with {data_publish_exec_id}"
             )
             item["data_publish_exec_id"] = data_publish_exec_id
-
         conn.update(table=table_name, data=item, where=where_clause)
 
     def validate_schema(self, conn, source_df):
@@ -185,11 +184,14 @@ class DataAsset:
         self.logger.write(message=f"Schema Validation = {schema_validation}")
         return schema_validation
 
-    def load_to_redshift(self,rs_conn,target_system_info,target_path,timestamp):
+    def load_to_redshift(self, rs_conn, target_system_info, target_path, timestamp):
         schema = target_system_info["rs_schema_nm"]
         rs_conn.truncate(f"{schema}.{self.rs_stg_table_nm}")
-        rs_conn.copy_from_s3_to_rs(f"{schema}.{self.rs_stg_table_nm}", target_path,
-                                "arn:aws:iam::076931226898:role/dl-frmwrk-redshiftRole", self.asset_file_delim, self.asset_file_type)
+        rs_conn.copy_from_s3_to_rs(
+            f"{schema}.{self.rs_stg_table_nm}", target_path,
+            "arn:aws:iam::076931226898:role/dl-frmwrk-redshiftRole",
+            self.asset_file_delim, self.asset_file_type
+        )
         s3 = boto3.resource('s3')
         my_bucket = s3.Bucket(target_system_info["bucket_name"])
         target_subdomain = target_system_info["subdomain"]

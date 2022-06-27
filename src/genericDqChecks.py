@@ -45,7 +45,8 @@ conn = Connector(db_secret, db_region, autocommit=True)
 # Creating an object to house imp info about the asset in one place
 asset = DataAsset(args, global_config, run_identifier="data-quality", conn=conn)
 # update the data catalog that DQ is in progress
-asset.update_data_catalog(conn, dq_validation="In-Progress",dq_validation_exec_id=args['JOB_RUN_ID'])
+asset.update_data_catalog(conn, dq_validation="In-Progress",
+                          dq_validation_exec_id=args['JOB_RUN_ID'])
 # Creation of source dataframe using spark and asset properties
 spark = get_spark(asset.logger)
 source_df = create_spark_df(
