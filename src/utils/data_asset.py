@@ -20,6 +20,7 @@ class DataAsset:
         self.source_id = args["source_id"]
         self.exec_id = args["exec_id"]
         self.fm_prefix = config["fm_prefix"]
+        self.aws_account = config["aws_account"]
         self.region = boto3.session.Session().region_name
         self.log_type = config["log_type"]
         self.secret_name = config["secret_name"]
@@ -186,12 +187,12 @@ class DataAsset:
 
     def load_to_redshift(self, rs_conn, target_system_info, target_path, timestamp):
         schema = target_system_info["rs_schema_nm"]
+        iam_role = f"arn:aws:iam::{self.aws_account}:role/dl-fmwrk-redshift-role"
         rs_conn.truncate(f"{schema}.{self.rs_stg_table_nm}")
         rs_conn.copy_from_s3_to_rs(
             f"{schema}.{self.rs_stg_table_nm}", target_path,
-            "arn:aws:iam::076931226898:role/dl-frmwrk-redshiftRole",
-            self.asset_file_delim, self.asset_file_type
-        )
+            iam_role, self.asset_file_delim, self.asset_file_type
+            )
         s3 = boto3.resource('s3')
         my_bucket = s3.Bucket(target_system_info["bucket_name"])
         target_subdomain = target_system_info["subdomain"]

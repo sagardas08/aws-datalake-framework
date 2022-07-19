@@ -1,17 +1,17 @@
 {
-  "aws_account": "076931226898",
+  "aws_account": "315119964270",
   "fm_prefix": "dl-fmwrk",
   "primary_region": "us-east-1",
   "secondary_region": "us-east-2",
   "log_type": "S",
   "fm_tgt_prefix": "dl-fmwrk-tgt",
-  "secret_name": "cape_privacy_key",
+  "secret_name": "dl-fmwrk-tokenization-key",
   "project_name": "aws-datalake-framework",
   "git_branch": "develop",
   "lambda_function_name": "dlFmwrkSrcDataInfo",
-  "db_secret": "postgres_dev",
+  "db_secret": "dl-fmwrk-metadata-dev",
   "db_region": "us-east-2",
   "workgroup": "dl-fmwrk-us-east-2",
-  "redshift_secret": "dl-fmwrk-redshift-cred",
+  "redshift_secret": "dl-fmwrk-redshift-dev",
   "redshift_region": "us-east-2"
 }

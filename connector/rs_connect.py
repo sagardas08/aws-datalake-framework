@@ -437,11 +437,14 @@ class RedshiftConnector:
             )
         self._execute(statement)
 
+    def list_schema(self):
+        pass
+
     def create_schema(self, schema_name):
         statement = F"CREATE SCHEMA IF NOT EXISTS {schema_name}"
         self._execute(statement)
 
-    def copy_from_s3_to_rs(self,table,s3_path,iam_role,delimiter,file_type):
+    def copy_from_s3_to_rs(self, table, s3_path, iam_role, delimiter, file_type):
         sql = f"copy {table} from '{s3_path}' iam_role '{iam_role}' delimiter '{delimiter}' {file_type};"
         self._execute(sql)
         self.conn.commit()
