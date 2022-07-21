@@ -39,7 +39,7 @@ Resources:
             "--additional-python-modules": "Crypto,packaging,rfc3339,cape-privacy[spark],psycopg2-binary"
         }
       MaxRetries: 0
-      Description: "Data Quality Checks"
+      Description: "Process Data Quality Checks"
       AllocatedCapacity: 5
 
   GlueDataMasking:
@@ -59,7 +59,7 @@ Resources:
             "--additional-python-modules": "Crypto,packaging,rfc3339,cape-privacy[spark],psycopg2-binary"
         }
       MaxRetries: 0
-      Description: "Process Marketing data."
+      Description: "Perform Data Masking."
       AllocatedCapacity: 5
 
   GlueDataPublish:
@@ -79,5 +79,5 @@ Resources:
             "--additional-python-modules": "Crypto,packaging,rfc3339,cape-privacy[spark],psycopg2-binary"
         }
       MaxRetries: 0
-      Description: "Join Marketing and Sales data."
+      Description: "Perform Data Publish"
       AllocatedCapacity: 5
