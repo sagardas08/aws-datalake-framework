@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  IamRole:
+    Type: String
+    Default: dl-fmwrk-glue-role
+
+  DlFmwrkPrefix:
+    Type: String
+    Default: dl-fmwrk
+
+  CodeBucketName:
+    Type: String
+    Default: dl-fmwrk-code-us-east-2
+
+  Region:
+    Type: String
+    Default: us-east-2
+
+  ProjectPrefix:
+    Type: String
+    Default: aws-datalake-framework
+
+Resources:
+  GlueDataQualityCheck:
+    Type: "AWS::Glue::Job"
+    Properties:
+      Role: !Ref IamRole
+      Name: !Join ["", [!Ref DlFmwrkPrefix, "-data-quality-checks-dev" ]]
+      Command: {
+        "Name" : "glueetl",
+        "ScriptLocation": !Sub "s3://${CodeBucketName}/${ProjectPrefix}/src/genericDqChecks.py"
+      }
+      DefaultArguments: {
+          "--extra-py-files": !Sub "s3://${CodeBucketName}/${ProjectPrefix}/dependencies/pydeequ.zip,s3://${CodeBucketName}/${ProjectPrefix}/dependencies/utils.zip,s3://${CodeBucketName}/${ProjectPrefix}/dependencies/connector.zip",
+            "--extra-files": !Sub "s3://${CodeBucketName}/${ProjectPrefix}/config/globalConfig.json",
+            "--extra-jars": !Sub "s3://${CodeBucketName}/${ProjectPrefix}/dependencies/deequ-1.0.3.jar",
+            "--TempDir": !Sub "s3://${CodeBucketName}/temporary/",
+            "--additional-python-modules": "Crypto,packaging,rfc3339,cape-privacy[spark],psycopg2-binary"
+        }
+      MaxRetries: 0
+      Description: "Data Quality Checks"
+      AllocatedCapacity: 5
+
+  GlueDataMasking:
+    Type: "AWS::Glue::Job"
+    Properties:
+      Role: !Ref IamRole
+      Name: !Join ["", [!Ref DlFmwrkPrefix, "-data-masking-dev" ]]
+      Command: {
+        "Name": "glueetl",
+        "ScriptLocation": !Sub "s3://${CodeBucketName}/${ProjectPrefix}/src/genericDataMasking.py"
+      }
+      DefaultArguments: {
+          "--extra-py-files": !Sub "s3://${CodeBucketName}/${ProjectPrefix}/dependencies/pydeequ.zip,s3://${CodeBucketName}/${ProjectPrefix}/dependencies/utils.zip,s3://${CodeBucketName}/${ProjectPrefix}/dependencies/connector.zip",
+            "--extra-files": !Sub "s3://${CodeBucketName}/${ProjectPrefix}/config/globalConfig.json",
+            "--extra-jars": !Sub "s3://${CodeBucketName}/${ProjectPrefix}/dependencies/deequ-1.0.3.jar",
+            "--TempDir": !Sub "s3://${CodeBucketName}/temporary/",
+            "--additional-python-modules": "Crypto,packaging,rfc3339,cape-privacy[spark],psycopg2-binary"
+        }
+      MaxRetries: 0
+      Description: "Process Marketing data."
+      AllocatedCapacity: 5
+
+  GlueDataPublish:
+    Type: "AWS::Glue::Job"
+    Properties:
+      Role: !Ref IamRole
+      Name: !Join ["", [!Ref DlFmwrkPrefix, "-data-publish-dev" ]]
+      Command: {
+        "Name": "glueetl",
+        "ScriptLocation": !Sub "s3://${CodeBucketName}/${ProjectPrefix}/src/genericDataPublish.py"
+      }
+      DefaultArguments: {
+          "--extra-py-files": !Sub "s3://${CodeBucketName}/${ProjectPrefix}/dependencies/pydeequ.zip,s3://${CodeBucketName}/${ProjectPrefix}/dependencies/utils.zip,s3://${CodeBucketName}/${ProjectPrefix}/dependencies/connector.zip",
+            "--extra-files": !Sub "s3://${CodeBucketName}/${ProjectPrefix}/config/globalConfig.json",
+            "--extra-jars": !Sub "s3://${CodeBucketName}/${ProjectPrefix}/dependencies/deequ-1.0.3.jar",
+            "--TempDir": !Sub "s3://${CodeBucketName}/temporary/",
+            "--additional-python-modules": "Crypto,packaging,rfc3339,cape-privacy[spark],psycopg2-binary"
+        }
+      MaxRetries: 0
+      Description: "Join Marketing and Sales data."
+      AllocatedCapacity: 5
