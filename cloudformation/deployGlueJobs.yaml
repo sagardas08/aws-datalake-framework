@@ -81,3 +81,16 @@ Resources:
       MaxRetries: 0
       Description: "Perform Data Publish"
       AllocatedCapacity: 5
+
+Outputs:
+  GlueDataQualityCheck:
+    Description: Latest Commit to be updated here
+    Value: Data Quality job updated from the latest code in !Sub "s3://${CodeBucketName}/${ProjectPrefix}/src/genericDqChecks.py"
+
+  GlueDataMasking:
+    Description: Latest Commit to be updated here
+    Value: Data Masking job updated from the latest code in !Sub "s3://${CodeBucketName}/${ProjectPrefix}/src/genericDataMasking.py"
+
+  GlueDataPublish:
+    Description: Latest Commit to be updated here
+    Value: Data Publish job updated from the latest code in !Sub "s3://${CodeBucketName}/${ProjectPrefix}/src/genericDataPublish.py"
