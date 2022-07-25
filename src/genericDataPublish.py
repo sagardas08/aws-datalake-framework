@@ -1,9 +1,12 @@
 import sys
 import time
+
 from awsglue.utils import getResolvedOptions
 from awsglue.context import GlueContext
 from awsglue.job import Job
+
 from pyspark.context import SparkContext
+
 from utils.data_asset import DataAsset
 from utils.comUtils import *
 from utils.publishUtils import *
@@ -70,6 +73,8 @@ try:
     target_path = get_publish_path(
         target_system_info, asset.asset_id, timestamp, asset.logger
     )
+
+    # Check if the redshift load indicator is enabled for this asset
     if asset.rs_load_ind:
         redshift_db = target_system_info["rs_db_nm"]
         redshift_schema = target_system_info["rs_schema_nm"]
@@ -100,7 +105,7 @@ try:
     get_or_create_db(asset.region, domain, workgroup, asset.logger)
     athena_path = get_athena_path(target_system_info, asset.asset_id)
 
-    # Updating the data catalog table to "Completed" if the publish is successful
+    # Updating the data catalog table to "Completed" if the publishing is successful
     asset.update_data_catalog(conn, data_publish="Completed")
 
     # Create table in Athena
