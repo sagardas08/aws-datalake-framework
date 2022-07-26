@@ -32,28 +32,27 @@ start_time = time.time()
 
 # Creating a spark session object
 spark = sql.SparkSession.builder.getOrCreate()
-
 # Creating a job
 job = Job(GlueContext(SparkContext.getOrCreate()))
 job.init(args["JOB_NAME"], args)
 db_secret = global_config['db_secret']
 db_region = global_config['db_region']
 conn = Connector(db_secret, db_region, autocommit=True)
-
 # Create object to store data asset info
 asset = DataAsset(args, global_config, run_identifier="data-standardization", conn=conn)
+# Update the data catalog dynamoDB table to "In-Progress" for easy monitoring
+asset.update_data_catalog(conn, data_standardization="In-Progress",data_standardization_exec_id=args['JOB_RUN_ID'])
+path_for_standardization = asset.get_masking_path()
 try:
     # Creating spark dataframe from input file.Supported:CSV,Parquet,JSON,ORC
     source_df = create_spark_df(
         spark,
-        asset.source_path,
+        path_for_standardization,
         asset.asset_file_type,
         asset.asset_file_delim,
         asset.asset_file_header,
         asset.logger,
     )
-    # Update the data catalog dynamoDB table to "In-Progress" for easy monitoring
-    asset.update_data_catalog(conn, data_standardization="In-Progress")
     # Getting data asset table dedicated for a specific asset which specifies if masking is required or not
     metadata = asset.get_asset_metadata(conn)
 
@@ -72,6 +71,9 @@ try:
     )
     # Writing the standardized data to the target path in parquet format
     result.repartition(1).write.parquet(target_path, mode="overwrite")
+
+    # Update data asset catalog with tha path of target file
+    asset.update_data_catalog(conn, tgt_file_path=target_path)
 
     # Storing the target file to Athena with DB = Domain and Table = Sub-domain_AssetId
     domain = target_system_info["domain"]
@@ -111,6 +113,7 @@ except Exception as e:
     # Updating the data catalog table to "Failed" in case of exceptions
     asset.update_data_catalog(conn, data_standardization="Failed")
     asset.logger.write_logs_to_s3()
+    raise sys.exit()
 
 end_time = time.time()
 total_time_taken = float("{0:.2f}".format(end_time - start_time))

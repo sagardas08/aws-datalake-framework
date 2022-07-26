@@ -226,8 +226,6 @@ def store_sparkdf_to_s3(
     :return:
     """
     target_path = target_path.replace("s3://", "s3a://")
-    timestamp = get_current_time()
-    target_path = target_path + timestamp + "/"
     if asset_file_type == "csv":
         dataframe.repartition(1).write.csv(target_path, header=True, mode="overwrite")
     if asset_file_type == "parquet":
