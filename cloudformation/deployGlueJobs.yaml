@@ -3,7 +3,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
   IamRole:
     Type: String
-    Default: dl-fmwrk-glue-role
+    Default: arn:aws:iam::315119964270:role/dl-fmwrk-glue-role
 
   DlFmwrkPrefix:
     Type: String
