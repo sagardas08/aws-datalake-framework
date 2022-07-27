@@ -11,7 +11,7 @@
   "lambda_function_name": "dlFmwrkSrcDataInfo",
   "db_secret": "dl-fmwrk-metadata-dev",
   "db_region": "us-east-2",
-  "workgroup": "dl-fmwrk-us-east-2",
+  "workgroup": "dl-fmwrk-athena-us-east-2",
   "redshift_secret": "dl-fmwrk-redshift-dev",
   "redshift_region": "us-east-2"
 }
