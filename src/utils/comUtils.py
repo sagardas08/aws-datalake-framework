@@ -226,16 +226,18 @@ def store_sparkdf_to_s3(
     :return:
     """
     target_path = target_path.replace("s3://", "s3a://")
-    if asset_file_type == "csv":
+    if asset_file_type == "csv" and asset_file_header == "False":
+        dataframe.repartition(1).write.csv(target_path, mode="overwrite")
+    if asset_file_type == "csv" and asset_file_header == "True":
         dataframe.repartition(1).write.csv(target_path, header=True, mode="overwrite")
     if asset_file_type == "parquet":
         dataframe.repartition(1).write.parquet(
-            target_path, header=True, mode="overwrite"
+            target_path, mode="overwrite"
         )
     if asset_file_type == "json":
-        dataframe.repartition(1).write.json(target_path, header=True, mode="overwrite")
+        dataframe.repartition(1).write.json(target_path, mode="overwrite")
     if asset_file_type == "orc":
-        dataframe.repartition(1).write.orc(target_path, header=True, mode="overwrite")
+        dataframe.repartition(1).write.orc(target_path, mode="overwrite")
 
 
 @log
