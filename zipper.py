@@ -21,17 +21,29 @@ def zip_utils(source_path, target_zip_path, base_dir=None):
         )
 
 
-root_dir = os.getcwd()
-utils_zip_src_path = root_dir + f"/src"
-utils_zip_target_path = root_dir + f"/dependencies/utils"
-lambda_zip_src_path = root_dir + f"/src/lambda"
-lambda_zip_target_path = root_dir + f"/lambda/lambda_function"
-connector_zip_src_path = root_dir
-connector_zip_target_path = root_dir + f"/dependencies/connector"
-print("Zipping process started ....")
-zip_utils(
-    utils_zip_src_path, utils_zip_target_path, base_dir="utils"
-)
-zip_utils(lambda_zip_src_path, lambda_zip_target_path)
-zip_utils(connector_zip_src_path, connector_zip_target_path, base_dir='connector')
-print("Zipping process completed ....")
+def remove_pycache():
+    print("Cleaning up ... ")
+    rm_pycache_cmd = 'find . | grep -E "(/__pycache__$|\.pyc$|\.pyo$)" | xargs rm -rf'
+    os.system(rm_pycache_cmd)
+
+
+def main():
+    remove_pycache()
+    root_dir = os.getcwd()
+    utils_zip_src_path = root_dir + f"/src"
+    utils_zip_target_path = root_dir + f"/dependencies/utils"
+    lambda_zip_src_path = root_dir + f"/src/lambda"
+    lambda_zip_target_path = root_dir + f"/lambda/lambda_function"
+    connector_zip_src_path = root_dir
+    connector_zip_target_path = root_dir + f"/dependencies/connector"
+    print("Process started ....")
+    zip_utils(
+        utils_zip_src_path, utils_zip_target_path, base_dir="utils"
+    )
+    zip_utils(lambda_zip_src_path, lambda_zip_target_path)
+    zip_utils(connector_zip_src_path, connector_zip_target_path, base_dir='connector')
+    print("Process completed ....")
+
+
+if __name__ == '__main__':
+    main()
