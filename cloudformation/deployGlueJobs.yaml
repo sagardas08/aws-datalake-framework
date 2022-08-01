@@ -30,7 +30,7 @@ Resources:
     Type: "AWS::Glue::Job"
     Properties:
       Role: !Ref IamRole
-      Name: !Join ["", [!Ref DlFmwrkPrefix, "-data-quality-checks-" !Ref Environment]
+      Name: !Join ["", [!Ref DlFmwrkPrefix, "-data-quality-checks-", !Ref Environment]]
       Command: {
         "Name" : "glueetl",
         "ScriptLocation": !Sub "s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/src/genericDqChecks.py"
@@ -50,7 +50,7 @@ Resources:
     Type: "AWS::Glue::Job"
     Properties:
       Role: !Ref IamRole
-      Name: !Join ["", [!Ref DlFmwrkPrefix, "-data-masking-" !Ref Environment]]
+      Name: !Join ["", [!Ref DlFmwrkPrefix, "-data-masking-", !Ref Environment]]
       Command: {
         "Name": "glueetl",
         "ScriptLocation": !Sub "s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/src/genericDataMasking.py"
@@ -70,7 +70,7 @@ Resources:
     Type: "AWS::Glue::Job"
     Properties:
       Role: !Ref IamRole
-      Name: !Join ["", [!Ref DlFmwrkPrefix, "-data-publish-" !Ref Environment]]
+      Name: !Join ["", [!Ref DlFmwrkPrefix, "-data-publish-", !Ref Environment]]
       Command: {
         "Name": "glueetl",
         "ScriptLocation": !Sub "s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/src/genericDataPublish.py"
