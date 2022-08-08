@@ -103,7 +103,7 @@ def create_spark_df(
             path=source_file_path,
             sep=asset_file_delim,
             header=True,
-            inferSchema=True,
+            inferSchema=True
         )
     elif asset_file_type == "csv" and asset_file_header == False:
         source_df = spark.read.csv(path=source_file_path, sep=asset_file_delim)
@@ -226,10 +226,10 @@ def store_sparkdf_to_s3(
     :return:
     """
     target_path = target_path.replace("s3://", "s3a://")
-    if asset_file_type == "csv" and asset_file_header == "False":
-        dataframe.repartition(1).write.csv(target_path, mode="overwrite")
-    if asset_file_type == "csv" and asset_file_header == "True":
+    if asset_file_type == "csv" and asset_file_header:
         dataframe.repartition(1).write.csv(target_path, header=True, mode="overwrite")
+    else:
+        dataframe.repartition(1).write.csv(target_path, mode="overwrite")
     if asset_file_type == "parquet":
         dataframe.repartition(1).write.parquet(
             target_path, mode="overwrite"
