@@ -6,7 +6,7 @@ from pydeequ.suggestions import *
 from pydeequ.repository import *
 
 from .logger import log
-
+from .data_type_mapper import UI_DQ_MAP
 
 PRIMARY_CHECKS = {
     "null": ".isComplete",
@@ -62,7 +62,7 @@ def dq_dtype(dtype):
     :return: String
     """
     dtype = dtype.lower().capitalize()
-    dq_data_type = f"ConstrainableDataTypes.{dtype}"
+    dq_data_type = f"{UI_DQ_MAP[dtype]}"
     return dq_data_type
 
 
@@ -107,10 +107,11 @@ def generate_code(responses, logger=None, adv_dq_info=None):
             len_assertion = generate_assertion("lambda", length)
             length_check = build_constraint(column, len_assertion, "max_length")
             check_list.append(length_check)
-        # Data type check
-        data_assertion = generate_assertion("data_type", ob["data_type"])
-        data_type_check = build_constraint(column, data_assertion, "data_type")
-        check_list.append(data_type_check)
+        # Data type check excluding the DateTime checks
+        if ob["data_type"] != "Datetime":
+            data_assertion = generate_assertion("data_type", ob["data_type"])
+            data_type_check = build_constraint(column, data_assertion, "data_type")
+            check_list.append(data_type_check)
     # Creating a unified string of Pydeequ checks
     parsed_checks = "".join(check_list)
     parsed_code = "checkOutput = VerificationSuite(spark).onData(source_df).addCheck(check{0}).run()".format(
