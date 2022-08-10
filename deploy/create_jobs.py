@@ -81,20 +81,20 @@ def create_masking_job(config, region=None):
     return response
 
 
-def create_standardization_job(config, region=None):
+def create_publish_job(config, region=None):
     """
-    Creates the data standardization job on aws glue
+    Creates the data publish job on aws glue
     """
     region = config["primary_region"] if region is None else region
     fm_prefix = config["fm_prefix"]
     project = config["project_name"]
     client = boto3.client("glue", region_name=region)
-    job_name = f"{fm_prefix}-data-standardization"
+    job_name = f"{fm_prefix}-data-publish"
     # delete the previously existing glue job
     client.delete_job(JobName=job_name)
     code_bucket = f"s3://{fm_prefix}-code-{region}"
-    # location of the data standardization script in the code bucket
-    script_location = f"{code_bucket}/{project}/src/genericDataStandardization.py"
+    # location of the data publish script in the code bucket
+    script_location = f"{code_bucket}/{project}/src/genericDataPublish.py"
     default_args = {
         "--extra-py-files": f"{code_bucket}/{project}/dependencies/pydeequ.zip,{code_bucket}/{project}/dependencies/utils.zip,{code_bucket}/{project}/dependencies/connector.zip",
         "--extra-files": f"{code_bucket}/{project}/config/globalConfig.json",
@@ -105,7 +105,7 @@ def create_standardization_job(config, region=None):
     # create a new glue job
     response = client.create_job(
         Name=job_name,
-        Description="Data Standardization Job",
+        Description="Data Publish Job",
         Role="2189_misc_roles",
         Command={
             "Name": "glueetl",
@@ -128,7 +128,7 @@ def create_glue_jobs(config, region=None):
     try:
         create_dq_job(config, region)
         create_masking_job(config, region)
-        create_standardization_job(config, region)
+        create_publish_job(config, region)
         return True
     except Exception as e:
         print(e)

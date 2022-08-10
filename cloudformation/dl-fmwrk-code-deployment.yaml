@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  IamRole:
+    Type: String
+    Default: arn:aws:iam::315119964270:role/dl-fmwrk-glue-role
+
+  DlFmwrkPrefix:
+    Type: String
+    Default: dl-fmwrk
+
+  CodeBucketName:
+    Type: String
+    Default: dl-fmwrk-code-us-east-2
+
+  Region:
+    Type: String
+    Default: us-east-2
+
+  ProjectPrefix:
+    Type: String
+    Default: aws-datalake-framework
+
+  Environment:
+    Type: String
+    Default: dev
+
+Resources:
+  GlueDataQualityCheck:
+    Type: "AWS::Glue::Job"
+    Properties:
+      Role: !Ref IamRole
+      Name: !Join ["", [!Ref DlFmwrkPrefix, "-data-quality-checks-", !Ref Environment]]
+      Command: {
+        "Name" : "glueetl",
+        "ScriptLocation": !Sub "s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/src/genericDqChecks.py"
+      }
+      DefaultArguments: {
+          "--extra-py-files": !Sub "s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/dependencies/pydeequ.zip,s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/dependencies/utils.zip,s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/dependencies/connector.zip",
+            "--extra-files": !Sub "s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/config/globalConfig.json",
+            "--extra-jars": !Sub "s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/dependencies/deequ-1.0.3.jar",
+            "--TempDir": !Sub "s3://${CodeBucketName}/temporary/",
+            "--additional-python-modules": "Crypto,packaging,rfc3339,cape-privacy[spark],psycopg2-binary"
+        }
+      MaxRetries: 0
+      Description: "Process Data Quality Checks"
+      AllocatedCapacity: 5
+
+  GlueDataMasking:
+    Type: "AWS::Glue::Job"
+    Properties:
+      Role: !Ref IamRole
+      Name: !Join ["", [!Ref DlFmwrkPrefix, "-data-masking-", !Ref Environment]]
+      Command: {
+        "Name": "glueetl",
+        "ScriptLocation": !Sub "s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/src/genericDataMasking.py"
+      }
+      DefaultArguments: {
+          "--extra-py-files": !Sub "s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/dependencies/pydeequ.zip,s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/dependencies/utils.zip,s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/dependencies/connector.zip",
+            "--extra-files": !Sub "s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/config/globalConfig.json",
+            "--extra-jars": !Sub "s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/dependencies/deequ-1.0.3.jar",
+            "--TempDir": !Sub "s3://${CodeBucketName}/temporary/",
+            "--additional-python-modules": "Crypto,packaging,rfc3339,cape-privacy[spark],psycopg2-binary"
+        }
+      MaxRetries: 0
+      Description: "Perform Data Masking."
+      AllocatedCapacity: 5
+
+  GlueDataPublish:
+    Type: "AWS::Glue::Job"
+    Properties:
+      Role: !Ref IamRole
+      Name: !Join ["", [!Ref DlFmwrkPrefix, "-data-publish-", !Ref Environment]]
+      Command: {
+        "Name": "glueetl",
+        "ScriptLocation": !Sub "s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/src/genericDataPublish.py"
+      }
+      DefaultArguments: {
+          "--extra-py-files": !Sub "s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/dependencies/pydeequ.zip,s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/dependencies/utils.zip,s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/dependencies/connector.zip",
+            "--extra-files": !Sub "s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/config/globalConfig.json",
+            "--extra-jars": !Sub "s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/dependencies/deequ-1.0.3.jar",
+            "--TempDir": !Sub "s3://${CodeBucketName}/temporary/",
+            "--additional-python-modules": "Crypto,packaging,rfc3339,cape-privacy[spark],psycopg2-binary"
+        }
+      MaxRetries: 0
+      Description: "Perform Data Publish"
+      AllocatedCapacity: 5
+
+Outputs:
+  GlueDataQualityCheck:
+    Description: Latest Commit to be updated here
+    Value: Data Quality job updated from the latest code in !Sub "s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/src/genericDqChecks.py"
+
+  GlueDataMasking:
+    Description: Latest Commit to be updated here
+    Value: Data Masking job updated from the latest code in !Sub "s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/src/genericDataMasking.py"
+
+  GlueDataPublish:
+    Description: Latest Commit to be updated here
+    Value: Data Publish job updated from the latest code in !Sub "s3://${CodeBucketName}/${Environment}/${ProjectPrefix}/src/genericDataPublish.py"

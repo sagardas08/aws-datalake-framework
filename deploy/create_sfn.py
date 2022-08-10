@@ -101,15 +101,15 @@ def create_step_function(config, region=None):
                         "Next": "dm_fallback",
                     }
                 ],
-                "Next": "Data Standardization",
+                "Next": "Data Publish",
                 "ResultPath": None,
             },
             "dm_fallback": {"Type": "Pass", "Next": "trigger_alert"},
-            "Data Standardization": {
+            "Data Publish": {
                 "Type": "Task",
                 "Resource": "arn:aws:states:::glue:startJobRun.sync",
                 "Parameters": {
-                    "JobName": "dl-fmwrk-data-standardization",
+                    "JobName": "dl-fmwrk-data-publish",
                     "Arguments": {
                         "--source_path.$": "$.source_path",
                         "--source_id.$": "$.source_id",

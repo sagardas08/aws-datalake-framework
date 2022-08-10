@@ -33,7 +33,7 @@ conn = Connector(db_secret, db_region, autocommit=True)
 # Create object to store data asset info
 asset = DataAsset(args, global_config, run_identifier="data-masking", conn=conn)
 # Update the data catalog dynamoDB table to "In-Progress" for easy monitoring
-asset.update_data_catalog(conn, data_masking="In-Progress",data_masking_exec_id=args['JOB_RUN_ID'])
+asset.update_data_catalog(conn, data_masking="In-Progress", data_masking_exec_id=args['JOB_RUN_ID'])
 # Creating spark Session object
 spark = get_spark_for_masking(asset.logger)
 try:

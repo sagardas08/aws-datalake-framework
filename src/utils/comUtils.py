@@ -26,7 +26,7 @@ def update_data_catalog(
     exec_id,
     dq_validation=None,
     data_masking=None,
-    data_standardization=None,
+    data_publish=None,
     logger=None,
 ):
     # method to update the data catalog entry
@@ -36,7 +36,7 @@ def update_data_catalog(
     :param exec_id: ID of each execution
     :param dq_validation: Status of dq_validation
     :param data_masking: Status of data_masking
-    :param data_standardization: Status of data_standardization
+    :param data_publish: Status of data_publish
     :param logger: Logger object
     :return: None
     """
@@ -45,8 +45,8 @@ def update_data_catalog(
         item["dq_validation"] = dq_validation
     elif data_masking:
         item["data_masking"] = data_masking
-    elif data_standardization:
-        item["data_standardization"] = data_standardization
+    elif data_publish:
+        item["data_publish"] = data_publish
     where_clause = ("exec_id=%s", [exec_id])
     conn.update(table=table_name, data=item, where=where_clause)
 
@@ -103,7 +103,7 @@ def create_spark_df(
             path=source_file_path,
             sep=asset_file_delim,
             header=True,
-            inferSchema=True,
+            inferSchema=True
         )
     elif asset_file_type == "csv" and asset_file_header == False:
         source_df = spark.read.csv(path=source_file_path, sep=asset_file_delim)
@@ -226,16 +226,18 @@ def store_sparkdf_to_s3(
     :return:
     """
     target_path = target_path.replace("s3://", "s3a://")
-    if asset_file_type == "csv":
+    if asset_file_type == "csv" and asset_file_header:
         dataframe.repartition(1).write.csv(target_path, header=True, mode="overwrite")
+    elif asset_file_type == "csv" and not asset_file_header:
+        dataframe.repartition(1).write.csv(target_path, mode="overwrite")
     if asset_file_type == "parquet":
         dataframe.repartition(1).write.parquet(
-            target_path, header=True, mode="overwrite"
+            target_path, mode="overwrite"
         )
     if asset_file_type == "json":
-        dataframe.repartition(1).write.json(target_path, header=True, mode="overwrite")
+        dataframe.repartition(1).write.json(target_path, mode="overwrite")
     if asset_file_type == "orc":
-        dataframe.repartition(1).write.orc(target_path, header=True, mode="overwrite")
+        dataframe.repartition(1).write.orc(target_path, mode="overwrite")
 
 
 @log
@@ -322,7 +324,7 @@ def get_target_system_info(conn, target_id, logger=None):
 
 
 @log
-def get_standardization_path(target_system_info, asset_id, timestamp, logger=None):
+def get_publish_path(target_system_info, asset_id, timestamp, logger=None):
     """
     Utility function to get the path where the standardized file should be stored
     :param target_system_info: Dictionary containing target system info

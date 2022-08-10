@@ -20,6 +20,7 @@ class DataAsset:
         self.source_id = args["source_id"]
         self.exec_id = args["exec_id"]
         self.fm_prefix = config["fm_prefix"]
+        self.aws_account = config["aws_account"]
         self.region = boto3.session.Session().region_name
         self.log_type = config["log_type"]
         self.secret_name = config["secret_name"]
@@ -39,6 +40,8 @@ class DataAsset:
         self.asset_file_header = items["file_header"]
         self.target_id = items["target_id"]
         self.encryption = items["file_encryption_ind"]
+        self.rs_stg_table_nm = items["rs_stg_table_nm"]
+        self.rs_load_ind = items["rs_load_ind"]
 
     def get_data_asset_info(self, conn):
         """
@@ -124,11 +127,11 @@ class DataAsset:
             conn,
             dq_validation=None,
             data_masking=None,
-            data_standardization=None,
+            data_publish=None,
             tgt_file_path=None,
             dq_validation_exec_id=None,
             data_masking_exec_id=None,
-            data_standardization_exec_id=None
+            data_publish_exec_id=None
     ):
         """
         Updates the data catalog in DynamoDB
@@ -146,11 +149,11 @@ class DataAsset:
                 message=f"updating data catalog entry data_masking with {data_masking}"
             )
             item["data_masking"] = data_masking
-        if data_standardization:
+        if data_publish:
             self.logger.write(
-                message=f"updating data catalog entry data_standardization with {data_standardization}"
+                message=f"updating data catalog entry data_publish with {data_publish}"
             )
-            item["data_standardization"] = data_standardization
+            item["data_publish"] = data_publish
         if tgt_file_path:
             self.logger.write(
                 message=f"updating data catalog entry tgt_file_path with {tgt_file_path}"
@@ -166,12 +169,11 @@ class DataAsset:
                 message=f"updating data catalog entry data_masking_exec_id with {data_masking_exec_id}"
             )
             item["data_masking_exec_id"] = data_masking_exec_id
-        if data_standardization_exec_id:
+        if data_publish_exec_id:
             self.logger.write(
-                message=f"updating data catalog entry data_standardization_exec_id with {data_standardization_exec_id}"
+                message=f"updating data catalog entry data_publish_exec_id with {data_publish_exec_id}"
             )
-            item["data_standardization_exec_id"] = data_standardization_exec_id
-
+            item["data_publish_exec_id"] = data_publish_exec_id
         conn.update(table=table_name, data=item, where=where_clause)
 
     def validate_schema(self, conn, source_df):
@@ -182,3 +184,17 @@ class DataAsset:
         schema_validation = validate_schema(self, source_df, conn, logger=self.logger)
         self.logger.write(message=f"Schema Validation = {schema_validation}")
         return schema_validation
+
+    def load_to_redshift(self, rs_conn, target_system_info, target_path, timestamp):
+        schema = target_system_info["rs_schema_nm"]
+        iam_role = f"arn:aws:iam::{self.aws_account}:role/dl-fmwrk-redshift-role"
+        rs_conn.truncate(f"{schema}.{self.rs_stg_table_nm}")
+        rs_conn.copy_from_s3_to_rs(
+            f"{schema}.{self.rs_stg_table_nm}", target_path,
+            iam_role, self.asset_file_delim, self.asset_file_type
+            )
+        s3 = boto3.resource('s3')
+        my_bucket = s3.Bucket(target_system_info["bucket_name"])
+        target_subdomain = target_system_info["subdomain"]
+        for obj in my_bucket.objects.filter(Prefix=f"{target_subdomain}/{self.asset_id}/{timestamp}/"):
+            s3.Object(obj.bucket_name, obj.key).delete()
