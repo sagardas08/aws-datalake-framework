@@ -228,7 +228,7 @@ def store_sparkdf_to_s3(
     target_path = target_path.replace("s3://", "s3a://")
     if asset_file_type == "csv" and asset_file_header:
         dataframe.repartition(1).write.csv(target_path, header=True, mode="overwrite")
-    else:
+    elif asset_file_type == "csv" and not asset_file_header:
         dataframe.repartition(1).write.csv(target_path, mode="overwrite")
     if asset_file_type == "parquet":
         dataframe.repartition(1).write.parquet(

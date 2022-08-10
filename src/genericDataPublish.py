@@ -69,6 +69,13 @@ try:
     # Getting the timestamp identifier from the source path
     timestamp = get_timestamp(asset.source_path)
 
+    # Column Typecasting
+    # Check incoming datatype and map it to the target data type
+    # target data type is to be retrieved from the metadata
+    # UI - Spark MAP
+    # Use the target_data_type from metadata and look it up in the mapping
+    # use the mapped data type: 1. SparkSQL 2. Typecast the column using spark
+
     # Getting the publish path with the help of info from target system
     target_path = get_publish_path(
         target_system_info, asset.asset_id, timestamp, asset.logger
