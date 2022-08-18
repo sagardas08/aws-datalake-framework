@@ -2,8 +2,8 @@ from pyspark.sql.types import *
 from pydeequ.checks import ConstrainableDataTypes
 
 
-# Spark to Deequ Mapping
-SPARK_DEEQU_MAP = {
+# Spark to DQ Mapping
+SPARK_DQ_MAP = {
     BooleanType:  ConstrainableDataTypes.Boolean,
     IntegerType:  ConstrainableDataTypes.Integral,
     ShortType:    ConstrainableDataTypes.Integral,
@@ -11,41 +11,39 @@ SPARK_DEEQU_MAP = {
     FloatType:    ConstrainableDataTypes.Numeric,
     DoubleType:   ConstrainableDataTypes.Fractional,
     DecimalType:  ConstrainableDataTypes.Fractional,
-    NumericType:  ConstrainableDataTypes.Numeric,
     StringType:   ConstrainableDataTypes.String,
 }
 
+# Spark to UI Mapping
 SPARK_UI_MAP = {
     BooleanType:  "Boolean",
     IntegerType:  "Integer",
-    ShortType:    "ShortInt",
+    ShortType:    "Integer",
     LongType:     "Integer",
     FloatType:    "Double",
     DoubleType:   "Double",
-    DecimalType:  "Decimal",
-    NumericType:  "Numeric",
+    DecimalType:  "Double",
     StringType:   "String",
+    TimestampType: "Datetime"
 }
 
+# UI to Spark Mapping
 UI_SPARK_MAP = {
     "Integer": IntegerType(),
-    "Decimal": DoubleType(),
     "String":  StringType(),
     "Long":    LongType(),
     "Boolean": BooleanType(),
     "Double":  DoubleType(),
-    "Float":   FloatType(),
     "Datetime": TimestampType()
 }
 
+# UI to DQ Map
 UI_DQ_MAP = {
     "Integer": ConstrainableDataTypes.Integral,
-    "Decimal": ConstrainableDataTypes.Fractional,
     "String":  ConstrainableDataTypes.String,
     "Long":    ConstrainableDataTypes.Integral,
     "Boolean": ConstrainableDataTypes.Boolean,
     "Double":  ConstrainableDataTypes.Numeric,
-    "Float":   ConstrainableDataTypes.Numeric,
     "Datetime": None
 }
 
