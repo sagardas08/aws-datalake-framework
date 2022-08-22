@@ -2,7 +2,7 @@ import pyspark
 from pyspark import sql
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
-from data_type_mapper import *
+from .data_type_mapper import *
 from .logger import log
 
 
